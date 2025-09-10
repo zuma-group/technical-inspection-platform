@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma'
 import { notFound, redirect } from 'next/navigation'
 import InspectionClient from './client'
 
+export const dynamic = 'force-dynamic'
+
 async function getOrCreateInspection(equipmentId: string) {
   // Check for existing in-progress inspection
   let inspection = await prisma.inspection.findFirst({

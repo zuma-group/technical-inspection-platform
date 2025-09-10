@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 async function getEquipment() {
   return await prisma.equipment.findMany({
     orderBy: { createdAt: 'desc' },
@@ -19,20 +21,10 @@ export default async function HomePage() {
   return (
     <div className="container">
       <div className="page-header">
-        <h1 style={{ 
-          fontSize: '24px', 
-          fontWeight: 'bold',
-          '@media (min-width: 768px)': { fontSize: '32px' },
-          '@media (min-width: 1024px)': { fontSize: '36px' }
-        }}>
+        <h1 className="page-title">
           Equipment Inspection Platform
         </h1>
-        <p style={{ 
-          color: '#6B7280', 
-          marginTop: '8px',
-          fontSize: '14px',
-          '@media (min-width: 768px)': { fontSize: '16px' }
-        }}>
+        <p className="page-subtitle">
           Select equipment to begin inspection
         </p>
       </div>
@@ -54,19 +46,10 @@ export default async function HomePage() {
               <div style={{ flex: 1, marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                   <div style={{ flex: 1 }}>
-                    <h2 style={{ 
-                      fontSize: '18px', 
-                      fontWeight: '600',
-                      marginBottom: '4px',
-                      '@media (min-width: 768px)': { fontSize: '20px' }
-                    }}>
+                    <h2 className="equipment-title">
                       {item.model}
                     </h2>
-                    <p style={{ 
-                      fontSize: '14px', 
-                      color: '#6B7280',
-                      '@media (min-width: 768px)': { fontSize: '15px' }
-                    }}>
+                    <p className="equipment-subtitle">
                       {item.type} • {item.serial}
                     </p>
                   </div>
@@ -75,25 +58,18 @@ export default async function HomePage() {
                   </span>
                 </div>
                 
-                <div style={{ 
-                  marginTop: '16px', 
-                  fontSize: '14px', 
-                  color: '#6B7280',
-                  display: 'grid',
-                  gap: '8px',
-                  '@media (min-width: 768px)': { fontSize: '15px' }
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '16px' }}>📍</span>
+                <div className="equipment-details">
+                  <div className="equipment-detail-item">
+                    <span className="equipment-icon">📍</span>
                     <span>{item.location}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '16px' }}>⏱️</span>
+                  <div className="equipment-detail-item">
+                    <span className="equipment-icon">⏱️</span>
                     <span>{item.hoursUsed} hours</span>
                   </div>
                   {item.inspections[0] && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '16px' }}>✓</span>
+                    <div className="equipment-detail-item">
+                      <span className="equipment-icon">✓</span>
                       <span>Last: {new Date(item.inspections[0].startedAt).toLocaleDateString()}</span>
                     </div>
                   )}
@@ -101,13 +77,7 @@ export default async function HomePage() {
               </div>
               
               <Link href={`/inspect/${item.id}`} style={{ textDecoration: 'none' }}>
-                <button className="btn btn-primary" style={{ 
-                  width: '100%',
-                  '@media (min-width: 768px)': { 
-                    fontSize: '16px',
-                    padding: '16px 24px'
-                  }
-                }}>
+                <button className="btn btn-primary" style={{ width: '100%' }}>
                   Start Inspection
                 </button>
               </Link>
