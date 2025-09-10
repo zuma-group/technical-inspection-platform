@@ -112,10 +112,15 @@ export default async function SelectTemplatePage({
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: '600' }}>{template.name}</h2>
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                       {isRecommended && (
                         <span className="status-badge" style={{ background: '#D1FAE5', color: '#065F46' }}>
                           RECOMMENDED
+                        </span>
+                      )}
+                      {template.parentTemplateId && (
+                        <span className="status-badge" style={{ background: '#F0F9FF', color: '#1E40AF' }}>
+                          EXTENDED
                         </span>
                       )}
                       {template.isDefault && (
@@ -128,6 +133,11 @@ export default async function SelectTemplatePage({
                   <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
                     For: {template.equipmentType.replace(/_/g, ' ')}
                   </p>
+                  {template.parentTemplateId && (
+                    <p style={{ fontSize: '13px', color: '#1E40AF', marginBottom: '8px' }}>
+                      ↳ Extends: {allTemplates.find(t => t.id === template.parentTemplateId)?.name || 'Parent template'}
+                    </p>
+                  )}
                 {template.description && (
                   <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '12px' }}>
                     {template.description}

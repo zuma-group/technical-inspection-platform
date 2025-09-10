@@ -74,14 +74,17 @@ model Media {
 
 // Template models for managing inspection templates
 model InspectionTemplate {
-  id            String                @id @default(cuid())
-  name          String
-  description   String?
-  equipmentType String                // BOOM_LIFT, SCISSOR_LIFT, TELEHANDLER, etc.
-  isDefault     Boolean               @default(false)
-  sections      TemplateSection[]
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
+  id              String                @id @default(cuid())
+  name            String
+  description     String?
+  equipmentType   String                // BOOM_LIFT, SCISSOR_LIFT, TELEHANDLER, etc.
+  isDefault       Boolean               @default(false)
+  parentTemplateId String?
+  parentTemplate  InspectionTemplate?   @relation("TemplateHierarchy", fields: [parentTemplateId], references: [id])
+  childTemplates  InspectionTemplate[]  @relation("TemplateHierarchy")
+  sections        TemplateSection[]
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 }
 
 model TemplateSection {

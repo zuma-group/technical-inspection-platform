@@ -24,6 +24,7 @@ interface MockTemplate {
   description?: string
   equipmentType: string
   isDefault: boolean
+  parentTemplateId?: string
   createdAt: Date
   updatedAt: Date
   sections: Array<{
@@ -145,6 +146,7 @@ export const mockStorage = {
         createdAt: new Date(),
         updatedAt: new Date(),
         isDefault: false,
+        parentTemplateId: template.parentTemplateId,
         sections: template.sections.map((section, idx) => ({
           ...section,
           id: section.id || `sec-${timestamp}-${idx}`,

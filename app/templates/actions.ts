@@ -59,6 +59,7 @@ export async function createTemplate(data: {
   name: string
   description?: string
   equipmentType: string
+  parentTemplateId?: string
   sections: Array<{
     name: string
     code: string
@@ -85,6 +86,7 @@ export async function createTemplate(data: {
         name: data.name,
         description: data.description,
         equipmentType: data.equipmentType,
+        parentTemplateId: data.parentTemplateId,
         sections: {
           create: data.sections.map(section => ({
             name: section.name,

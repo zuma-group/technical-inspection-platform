@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getTemplates } from './actions'
+import DeleteButton from './delete-button'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -49,15 +50,27 @@ export default async function TemplatesPage() {
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
                   <h2 style={{ fontSize: '18px', fontWeight: '600' }}>{template.name}</h2>
-                  {template.isDefault && (
-                    <span className="status-badge" style={{ background: '#DBEAFE', color: '#1E40AF' }}>
-                      DEFAULT
-                    </span>
-                  )}
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {template.parentTemplateId && (
+                      <span className="status-badge" style={{ background: '#F0F9FF', color: '#1E40AF' }}>
+                        CHILD
+                      </span>
+                    )}
+                    {template.isDefault && (
+                      <span className="status-badge" style={{ background: '#DBEAFE', color: '#1E40AF' }}>
+                        DEFAULT
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
                   {template.equipmentType.replace('_', ' ')}
                 </p>
+                {template.parentTemplateId && (
+                  <p style={{ fontSize: '13px', color: '#1E40AF', marginBottom: '8px' }}>
+                    ↳ Extends: {templates.find(t => t.id === template.parentTemplateId)?.name || 'Parent template'}
+                  </p>
+                )}
                 {template.description && (
                   <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '12px' }}>
                     {template.description}
@@ -72,7 +85,7 @@ export default async function TemplatesPage() {
                 </div>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                 <Link href={`/templates/${template.id}/edit`}>
                   <button className="btn btn-secondary" style={{ width: '100%' }}>
                     Edit
@@ -83,6 +96,11 @@ export default async function TemplatesPage() {
                     Preview
                   </button>
                 </Link>
+                <DeleteButton 
+                  templateId={template.id} 
+                  templateName={template.name}
+                  isDefault={template.isDefault}
+                />
               </div>
             </div>
           ))}

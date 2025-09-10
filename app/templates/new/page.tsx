@@ -1,24 +1,74 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createTemplate } from '../actions'
+import { createTemplate, getTemplates } from '../actions'
 
 export default function NewTemplatePage() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [equipmentType, setEquipmentType] = useState('BOOM_LIFT')
+  const [parentTemplateId, setParentTemplateId] = useState('')
+  const [availableTemplates, setAvailableTemplates] = useState<any[]>([])
   const [sections, setSections] = useState([
     {
       id: 'temp-1',
       name: '',
       code: '',
       order: 1,
-      checkpoints: []
+      checkpoints: [],
+      inherited: false
     }
   ])
+
+  useEffect(() => {
+    async function loadTemplates() {
+      const templates = await getTemplates()
+      setAvailableTemplates(templates)
+    }
+    loadTemplates()
+  }, [])
+
+  useEffect(() => {
+    if (parentTemplateId) {
+      const parentTemplate = availableTemplates.find(t => t.id === parentTemplateId)
+      if (parentTemplate) {
+        // Set equipment type to match parent
+        setEquipmentType(parentTemplate.equipmentType)
+        
+        // Copy parent sections as inherited
+        const inheritedSections = parentTemplate.sections.map((section: any) => ({
+          ...section,
+          id: `inherited-${section.id}`,
+          inherited: true,
+          checkpoints: section.checkpoints.map((cp: any) => ({
+            ...cp,
+            id: `inherited-${cp.id}`,
+            inherited: true
+          }))
+        }))
+        
+        // Keep any additional sections that were added
+        const additionalSections = sections.filter(s => !s.inherited)
+        setSections([...inheritedSections, ...additionalSections])
+      }
+    } else {
+      // Remove inherited sections if no parent is selected
+      setSections(sections.filter(s => !s.inherited))
+      if (sections.filter(s => !s.inherited).length === 0) {
+        setSections([{
+          id: 'temp-1',
+          name: '',
+          code: '',
+          order: 1,
+          checkpoints: [],
+          inherited: false
+        }])
+      }
+    }
+  }, [parentTemplateId])
 
   const addSection = () => {
     setSections([...sections, {
@@ -26,11 +76,17 @@ export default function NewTemplatePage() {
       name: '',
       code: '',
       order: sections.length + 1,
-      checkpoints: []
+      checkpoints: [],
+      inherited: false
     }])
   }
 
   const removeSection = (id: string) => {
+    const section = sections.find(s => s.id === id)
+    if (section?.inherited) {
+      alert('Cannot remove inherited sections. Choose a different parent template if needed.')
+      return
+    }
     setSections(sections.filter(s => s.id !== id))
   }
 
@@ -82,7 +138,9 @@ export default function NewTemplatePage() {
   }
 
   const handleSubmit = async () => {
-    if (!name || sections.some(s => !s.name || !s.code)) {
+    // Only validate non-inherited sections
+    const nonInheritedSections = sections.filter(s => !s.inherited)
+    if (!name || nonInheritedSections.some(s => !s.name || !s.code)) {
       alert('Please fill in all required fields')
       return
     }
@@ -92,6 +150,7 @@ export default function NewTemplatePage() {
         name,
         description,
         equipmentType,
+        parentTemplateId: parentTemplateId || undefined,
         sections: sections.map((s, idx) => ({
           name: s.name,
           code: s.code,
@@ -133,6 +192,36 @@ export default function NewTemplatePage() {
       <div className="card" style={{ marginBottom: '20px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Template Details</h2>
         
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+            Parent Template (Optional)
+          </label>
+          <select
+            value={parentTemplateId}
+            onChange={(e) => setParentTemplateId(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #E5E7EB',
+              borderRadius: '8px',
+              fontSize: '16px',
+              background: 'white'
+            }}
+          >
+            <option value="">None - Create from scratch</option>
+            {availableTemplates.map(template => (
+              <option key={template.id} value={template.id}>
+                {template.name} ({template.equipmentType.replace('_', ' ')})
+              </option>
+            ))}
+          </select>
+          {parentTemplateId && (
+            <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '8px' }}>
+              This template will inherit all sections and checkpoints from the parent. You can add additional sections below.
+            </p>
+          )}
+        </div>
+
         <div style={{ marginBottom: '16px' }}>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
             Template Name *
@@ -179,13 +268,15 @@ export default function NewTemplatePage() {
           <select
             value={equipmentType}
             onChange={(e) => setEquipmentType(e.target.value)}
+            disabled={!!parentTemplateId}
             style={{
               width: '100%',
               padding: '12px',
               border: '1px solid #E5E7EB',
               borderRadius: '8px',
               fontSize: '16px',
-              background: 'white'
+              background: parentTemplateId ? '#F9FAFB' : 'white',
+              cursor: parentTemplateId ? 'not-allowed' : 'pointer'
             }}
           >
             <option value="BOOM_LIFT">Boom Lift</option>
@@ -207,39 +298,59 @@ export default function NewTemplatePage() {
 
         {sections.map((section, sectionIndex) => (
           <div key={section.id} style={{ 
-            background: '#F9FAFB', 
+            background: section.inherited ? '#F0F9FF' : '#F9FAFB', 
             borderRadius: '8px', 
             padding: '16px',
-            marginBottom: '16px'
+            marginBottom: '16px',
+            border: section.inherited ? '2px solid #BFDBFE' : 'none'
           }}>
+            {section.inherited && (
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#1E40AF', 
+                fontWeight: '600', 
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <span>↳</span> INHERITED FROM PARENT
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
               <input
                 type="text"
                 value={section.code}
                 onChange={(e) => updateSection(section.id, 'code', e.target.value)}
+                disabled={section.inherited}
                 placeholder="Code (e.g., PB)"
                 style={{
                   width: '100px',
                   padding: '8px',
                   border: '1px solid #E5E7EB',
                   borderRadius: '6px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  background: section.inherited ? '#F9FAFB' : 'white',
+                  cursor: section.inherited ? 'not-allowed' : 'text'
                 }}
               />
               <input
                 type="text"
                 value={section.name}
                 onChange={(e) => updateSection(section.id, 'name', e.target.value)}
+                disabled={section.inherited}
                 placeholder="Section Name (e.g., Platform & Basket)"
                 style={{
                   flex: 1,
                   padding: '8px',
                   border: '1px solid #E5E7EB',
                   borderRadius: '6px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  background: section.inherited ? '#F9FAFB' : 'white',
+                  cursor: section.inherited ? 'not-allowed' : 'text'
                 }}
               />
-              {sections.length > 1 && (
+              {!section.inherited && sections.filter(s => !s.inherited).length > 1 && (
                 <button
                   onClick={() => removeSection(section.id)}
                   className="btn btn-danger"
@@ -262,26 +373,32 @@ export default function NewTemplatePage() {
                     type="text"
                     value={checkpoint.code}
                     onChange={(e) => updateCheckpoint(section.id, checkpoint.id, 'code', e.target.value)}
+                    disabled={section.inherited}
                     placeholder="Code"
                     style={{
                       width: '80px',
                       padding: '6px',
                       border: '1px solid #E5E7EB',
                       borderRadius: '4px',
-                      fontSize: '13px'
+                      fontSize: '13px',
+                      background: section.inherited ? '#F9FAFB' : 'white',
+                      cursor: section.inherited ? 'not-allowed' : 'text'
                     }}
                   />
                   <input
                     type="text"
                     value={checkpoint.name}
                     onChange={(e) => updateCheckpoint(section.id, checkpoint.id, 'name', e.target.value)}
+                    disabled={section.inherited}
                     placeholder="Checkpoint Name"
                     style={{
                       flex: 1,
                       padding: '6px',
                       border: '1px solid #E5E7EB',
                       borderRadius: '4px',
-                      fontSize: '13px'
+                      fontSize: '13px',
+                      background: section.inherited ? '#F9FAFB' : 'white',
+                      cursor: section.inherited ? 'not-allowed' : 'text'
                     }}
                   />
                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -289,32 +406,37 @@ export default function NewTemplatePage() {
                       type="checkbox"
                       checked={checkpoint.critical}
                       onChange={(e) => updateCheckpoint(section.id, checkpoint.id, 'critical', e.target.checked)}
+                      disabled={section.inherited}
                     />
                     <span style={{ fontSize: '13px' }}>Critical</span>
                   </label>
-                  <button
-                    onClick={() => removeCheckpoint(section.id, checkpoint.id)}
-                    style={{
-                      padding: '4px 8px',
-                      background: '#EF4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ✕
-                  </button>
+                  {!section.inherited && (
+                    <button
+                      onClick={() => removeCheckpoint(section.id, checkpoint.id)}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#EF4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               ))}
-              <button
-                onClick={() => addCheckpoint(section.id)}
-                className="btn btn-secondary"
-                style={{ padding: '6px 12px', fontSize: '13px', marginTop: '8px' }}
-              >
-                + Add Checkpoint
-              </button>
+              {!section.inherited && (
+                <button
+                  onClick={() => addCheckpoint(section.id)}
+                  className="btn btn-secondary"
+                  style={{ padding: '6px 12px', fontSize: '13px', marginTop: '8px' }}
+                >
+                  + Add Checkpoint
+                </button>
+              )}
             </div>
           </div>
         ))}
