@@ -1,0 +1,158 @@
+import { prisma } from '@/lib/prisma'
+import { notFound, redirect } from 'next/navigation'
+import InspectionClient from './client'
+
+async function getOrCreateInspection(equipmentId: string) {
+  // Check for existing in-progress inspection
+  let inspection = await prisma.inspection.findFirst({
+    where: {
+      equipmentId,
+      status: 'IN_PROGRESS',
+    },
+    include: {
+      equipment: true,
+      sections: {
+        orderBy: { order: 'asc' },
+        include: {
+          checkpoints: {
+            orderBy: { order: 'asc' },
+            include: {
+              media: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (inspection) return inspection
+
+  // Get default user
+  let user = await prisma.user.findFirst()
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email: 'tech@system.local',
+        name: 'Field Technician',
+      },
+    })
+  }
+
+  // Create new inspection with sections
+  const sections = [
+    {
+      name: 'Platform & Basket',
+      code: 'PB',
+      order: 1,
+      checkpoints: [
+        { code: 'PB-01', name: 'Guard Rails Secure', critical: true, order: 1 },
+        { code: 'PB-02', name: 'Gate Functions', critical: true, order: 2 },
+        { code: 'PB-03', name: 'Control Panel', critical: false, order: 3 },
+        { code: 'PB-04', name: 'Emergency Stop', critical: true, order: 4 },
+        { code: 'PB-05', name: 'Floor Condition', critical: false, order: 5 },
+      ],
+    },
+    {
+      name: 'Boom & Hydraulics',
+      code: 'BH',
+      order: 2,
+      checkpoints: [
+        { code: 'BH-01', name: 'Hydraulic Fluid Level', critical: true, order: 1 },
+        { code: 'BH-02', name: 'Cylinder Condition', critical: true, order: 2 },
+        { code: 'BH-03', name: 'Hose Inspection', critical: true, order: 3 },
+        { code: 'BH-04', name: 'Boom Movement', critical: false, order: 4 },
+        { code: 'BH-05', name: 'Load Capacity Label', critical: false, order: 5 },
+      ],
+    },
+    {
+      name: 'Base & Chassis',
+      code: 'BC',
+      order: 3,
+      checkpoints: [
+        { code: 'BC-01', name: 'Tires/Tracks Condition', critical: true, order: 1 },
+        { code: 'BC-02', name: 'Stabilizers/Outriggers', critical: true, order: 2 },
+        { code: 'BC-03', name: 'Frame Integrity', critical: true, order: 3 },
+        { code: 'BC-04', name: 'Drive Controls', critical: false, order: 4 },
+        { code: 'BC-05', name: 'Access Ladder/Steps', critical: false, order: 5 },
+      ],
+    },
+    {
+      name: 'Safety Systems',
+      code: 'SS',
+      order: 4,
+      checkpoints: [
+        { code: 'SS-01', name: 'Alarm Systems', critical: true, order: 1 },
+        { code: 'SS-02', name: 'Limit Switches', critical: true, order: 2 },
+        { code: 'SS-03', name: 'Load Sensor', critical: true, order: 3 },
+        { code: 'SS-04', name: 'Tilt Sensor', critical: true, order: 4 },
+        { code: 'SS-05', name: 'Safety Harness Points', critical: false, order: 5 },
+      ],
+    },
+    {
+      name: 'Electrical Systems',
+      code: 'ES',
+      order: 5,
+      checkpoints: [
+        { code: 'ES-01', name: 'Battery Condition', critical: true, order: 1 },
+        { code: 'ES-02', name: 'Cables & Connections', critical: true, order: 2 },
+        { code: 'ES-03', name: 'Control Box', critical: false, order: 3 },
+        { code: 'ES-04', name: 'Lights & Beacons', critical: false, order: 4 },
+        { code: 'ES-05', name: 'Charging System', critical: false, order: 5 },
+      ],
+    },
+  ]
+
+  inspection = await prisma.inspection.create({
+    data: {
+      equipmentId,
+      technicianId: user.id,
+      status: 'IN_PROGRESS',
+      sections: {
+        create: sections.map(section => ({
+          name: section.name,
+          code: section.code,
+          order: section.order,
+          checkpoints: {
+            create: section.checkpoints,
+          },
+        })),
+      },
+    },
+    include: {
+      equipment: true,
+      sections: {
+        orderBy: { order: 'asc' },
+        include: {
+          checkpoints: {
+            orderBy: { order: 'asc' },
+            include: {
+              media: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  return inspection
+}
+
+export default async function InspectPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params
+  
+  const equipment = await prisma.equipment.findUnique({
+    where: { id },
+  })
+
+  if (!equipment) {
+    notFound()
+  }
+
+  const inspection = await getOrCreateInspection(id)
+
+  return <InspectionClient inspection={inspection} />
+}

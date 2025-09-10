@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Equipment {
+  id           String       @id @default(cuid())
+  type         String
+  model        String
+  serial       String       @unique
+  location     String
+  hoursUsed    Int          @default(0)
+  status       String       @default("OPERATIONAL")
+  inspections  Inspection[]
+  createdAt    DateTime     @default(now())
+}
+
+model Inspection {
+  id           String       @id @default(cuid())
+  equipmentId  String
+  equipment    Equipment    @relation(fields: [equipmentId], references: [id])
+  technicianId String
+  technician   User         @relation(fields: [technicianId], references: [id])
+  status       String       @default("IN_PROGRESS")
+  sections     Section[]
+  startedAt    DateTime     @default(now())
+  completedAt  DateTime?
+}
+
+model Section {
+  id           String       @id @default(cuid())
+  inspectionId String
+  inspection   Inspection   @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  name         String
+  code         String
+  order        Int
+  checkpoints  Checkpoint[]
+}
+
+model Checkpoint {
+  id             String   @id @default(cuid())
+  sectionId      String
+  section        Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  code           String
+  name           String
+  critical       Boolean  @default(false)
+  status         String?
+  notes          String?
+  estimatedHours Float?
+  order          Int
+  media          Media[]
+}
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String
+  inspections Inspection[]
+}
+
+model Media {
+  id           String     @id @default(cuid())
+  checkpointId String
+  checkpoint   Checkpoint @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
+  type         String     // 'photo' or 'video'
+  url          String
+  filename     String
+  createdAt    DateTime   @default(now())
+}

@@ -1,0 +1,153 @@
+# Technical Inspection Platform
+
+A high-performance equipment inspection system designed for field technicians to inspect construction and industrial machinery. Built with a focus on speed, mobile optimization, and one-finger operation in harsh outdoor conditions.
+
+## Key Features
+
+- ⚡ **Lightning-Fast Performance**: Server-side rendering, minimal client JS, optimistic UI updates
+- 📱 **Mobile-First Design**: Large touch targets (48px min), one-finger operation, direct camera access
+- 🔍 **Smart Inspection Workflow**: Auto-creates inspections, tracks progress across sections
+- 📸 **Integrated Media Capture**: Direct camera/video capture with HTML5, instant uploads
+- 🔧 **Automated Status Updates**: Equipment status automatically determined by checkpoint results
+- ✅ **Efficient Checkpoint System**: Pass/Corrected/Action Required states with repair time estimates
+- 🎯 **Field-Optimized**: Works in bright sunlight, with gloves, in dusty/wet conditions
+
+## Supported Equipment
+
+- Boom Lifts
+- Scissor Lifts
+- Telehandlers
+- Forklifts
+- Other construction/industrial machinery
+
+## Tech Stack
+
+- **Framework**: Next.js 15 with App Router (Server Components)
+- **Language**: TypeScript
+- **Database**: PostgreSQL with Prisma ORM
+- **Styling**: Pure CSS (no Tailwind for maximum performance)
+- **State Management**: Server Actions for instant UI updates
+- **Media Storage**: Local filesystem with direct URL access
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- PostgreSQL database
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd technical-inspection-platform
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Set up environment variables:
+```bash
+cp .env.example .env
+```
+
+Update `.env` with your PostgreSQL connection:
+```
+DATABASE_URL="postgresql://postgres:password@localhost:5432/team_inspection_tool?schema=public"
+```
+
+4. Set up the database:
+```bash
+# Push schema to database
+npm run db:push
+
+# Seed with test equipment
+npm run db:seed
+```
+
+5. Run the development server:
+```bash
+npm run dev
+```
+
+The server will auto-find an available port and open in your browser.
+
+## Commands
+
+```bash
+# Development
+npm run dev                  # Start development server (auto-finds available port)
+npm install                  # Install dependencies
+
+# Database
+npm run db:push              # Push schema changes to database (use --force-reset for breaking changes)
+npm run db:seed              # Seed database with test equipment
+
+# Build & Deploy
+npm run build                # Build for production (includes Prisma generate)
+npm run start                # Start production server
+```
+
+## Project Structure
+
+```
+app/
+├── page.tsx                 # Equipment list (server component)
+├── inspect/[id]/
+│   ├── page.tsx            # Inspection setup (server)
+│   ├── client.tsx          # Inspection UI (client)
+│   ├── modal.tsx           # Checkpoint modal
+│   └── actions.ts          # Server actions
+├── api/upload/             # Media upload endpoint
+└── globals.css             # Pure CSS (no Tailwind)
+
+prisma/
+├── schema.prisma           # Database schema
+└── seed.js                 # Test data
+
+lib/prisma.ts              # Prisma client singleton
+public/uploads/            # Uploaded media files
+```
+
+## Inspection Workflow
+
+1. **Select Equipment**: Browse/search equipment list on home page
+2. **Start Inspection**: Auto-creates new inspection or resumes in-progress
+3. **Review Checkpoints**: Go through each section's checkpoints
+4. **Mark Status**:
+   - ✅ **Pass**: Instant update, moves to next
+   - 🔧 **Corrected**: Opens modal for notes & media
+   - ⚠️ **Action Required**: Opens modal for repair estimate, notes & media
+5. **Complete Inspection**: Equipment status auto-updates based on results
+
+## Equipment Status Logic
+
+On inspection completion:
+- **OUT_OF_SERVICE**: Any critical checkpoint marked Action Required
+- **MAINTENANCE**: Any non-critical checkpoint marked Action Required  
+- **OPERATIONAL**: All checkpoints passed or corrected
+
+## Performance Optimizations
+
+- Server-side rendering for instant page loads
+- Optimistic UI updates with `useTransition`
+- Direct database queries without ORM layers
+- Minimal client-side JavaScript
+- No build-time CSS processing
+- Direct file uploads without cloud services
+
+## Development Tips
+
+- Use large touch targets (48px minimum) for mobile
+- Keep modals simple with single-purpose forms
+- Prefer server actions over API routes
+- Test on actual mobile devices in sunlight
+- Ensure forms work with one finger/thumb
+
+## License
+
+MIT
