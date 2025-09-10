@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createTemplate, getTemplates } from '../actions'
+import CustomSelect from '@/app/components/custom-select'
 
 export default function NewTemplatePage() {
   const router = useRouter()
@@ -196,25 +197,18 @@ export default function NewTemplatePage() {
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
             Parent Template (Optional)
           </label>
-          <select
+          <CustomSelect
             value={parentTemplateId}
-            onChange={(e) => setParentTemplateId(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px',
-              background: 'white'
-            }}
-          >
-            <option value="">None - Create from scratch</option>
-            {availableTemplates.map(template => (
-              <option key={template.id} value={template.id}>
-                {template.name} ({template.equipmentType.replace('_', ' ')})
-              </option>
-            ))}
-          </select>
+            onChange={setParentTemplateId}
+            placeholder="None - Create from scratch"
+            options={[
+              { value: '', label: 'None - Create from scratch' },
+              ...availableTemplates.map(template => ({
+                value: template.id,
+                label: `${template.name} (${template.equipmentType.replace('_', ' ')})`
+              }))
+            ]}
+          />
           {parentTemplateId && (
             <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '8px' }}>
               This template will inherit all sections and checkpoints from the parent. You can add additional sections below.
@@ -265,26 +259,19 @@ export default function NewTemplatePage() {
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
             Equipment Type *
           </label>
-          <select
+          <CustomSelect
             value={equipmentType}
-            onChange={(e) => setEquipmentType(e.target.value)}
+            onChange={setEquipmentType}
             disabled={!!parentTemplateId}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px',
-              background: parentTemplateId ? '#F9FAFB' : 'white',
-              cursor: parentTemplateId ? 'not-allowed' : 'pointer'
-            }}
-          >
-            <option value="BOOM_LIFT">Boom Lift</option>
-            <option value="SCISSOR_LIFT">Scissor Lift</option>
-            <option value="TELEHANDLER">Telehandler</option>
-            <option value="FORKLIFT">Forklift</option>
-            <option value="OTHER">Other</option>
-          </select>
+            placeholder="Select equipment type"
+            options={[
+              { value: 'BOOM_LIFT', label: 'Boom Lift' },
+              { value: 'SCISSOR_LIFT', label: 'Scissor Lift' },
+              { value: 'TELEHANDLER', label: 'Telehandler' },
+              { value: 'FORKLIFT', label: 'Forklift' },
+              { value: 'OTHER', label: 'Other' }
+            ]}
+          />
         </div>
       </div>
 

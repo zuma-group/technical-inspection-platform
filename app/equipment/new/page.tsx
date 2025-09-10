@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createEquipment } from '../actions'
+import CustomSelect from '@/app/components/custom-select'
 
 export default function NewEquipmentPage() {
   const router = useRouter()
@@ -73,24 +74,18 @@ export default function NewEquipmentPage() {
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
             Equipment Type *
           </label>
-          <select
+          <CustomSelect
             value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px',
-              background: 'white'
-            }}
-          >
-            <option value="BOOM_LIFT">Boom Lift</option>
-            <option value="SCISSOR_LIFT">Scissor Lift</option>
-            <option value="TELEHANDLER">Telehandler</option>
-            <option value="FORKLIFT">Forklift</option>
-            <option value="OTHER">Other</option>
-          </select>
+            onChange={(value) => setFormData({ ...formData, type: value })}
+            placeholder="Select equipment type"
+            options={[
+              { value: 'BOOM_LIFT', label: 'Boom Lift' },
+              { value: 'SCISSOR_LIFT', label: 'Scissor Lift' },
+              { value: 'TELEHANDLER', label: 'Telehandler' },
+              { value: 'FORKLIFT', label: 'Forklift' },
+              { value: 'OTHER', label: 'Other' }
+            ]}
+          />
         </div>
 
         <div style={{ marginBottom: '20px' }}>
@@ -156,22 +151,16 @@ export default function NewEquipmentPage() {
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
             Status
           </label>
-          <select
+          <CustomSelect
             value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px',
-              background: 'white'
-            }}
-          >
-            <option value="OPERATIONAL">Operational</option>
-            <option value="MAINTENANCE">Maintenance</option>
-            <option value="OUT_OF_SERVICE">Out of Service</option>
-          </select>
+            onChange={(value) => setFormData({ ...formData, status: value })}
+            placeholder="Select status"
+            options={[
+              { value: 'OPERATIONAL', label: 'Operational' },
+              { value: 'MAINTENANCE', label: 'Maintenance' },
+              { value: 'OUT_OF_SERVICE', label: 'Out of Service' }
+            ]}
+          />
         </div>
 
         <div style={{ 
