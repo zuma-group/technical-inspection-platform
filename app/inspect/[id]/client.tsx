@@ -130,7 +130,7 @@ export default function InspectionClient({ inspection }) {
           <div className="header-content">
             <button
               onClick={() => router.push('/')}
-              className="btn btn-secondary"
+              className="btn btn-secondary back-button"
               style={{ padding: '8px 12px', marginBottom: '16px', fontSize: '14px' }}
             >
               ← Back
@@ -165,6 +165,17 @@ export default function InspectionClient({ inspection }) {
                 </div>
               </button>
             ))}
+          </div>
+          
+          <div className="sidebar-complete-button">
+            <button
+              onClick={handleComplete}
+              disabled={completedCheckpoints < totalCheckpoints || isPending}
+              className="btn btn-primary"
+              style={{ width: '100%', marginTop: '20px' }}
+            >
+              Complete Inspection ({completedCheckpoints}/{totalCheckpoints})
+            </button>
           </div>
         </div>
       </div>
@@ -309,7 +320,7 @@ export default function InspectionClient({ inspection }) {
         </div>
       </div>
 
-      <div className="bottom-bar desktop-floating">
+      <div className="bottom-bar mobile-only">
         <button
           onClick={handleComplete}
           disabled={completedCheckpoints < totalCheckpoints || isPending}

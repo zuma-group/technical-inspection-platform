@@ -603,19 +603,32 @@ input, select, textarea {
   }
 }
 
-.desktop-floating {
-  position: sticky;
+.sidebar-complete-button {
+  display: none;
 }
 
 @media (min-width: 1024px) {
-  .desktop-floating {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: auto;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    padding: 16px;
+  .sidebar-complete-button {
+    display: block;
+  }
+}
+
+.mobile-only {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  .mobile-only {
+    display: none;
+  }
+}
+
+.back-button {
+  width: 50%;
+}
+
+@media (min-width: 1024px) {
+  .back-button {
+    width: 100%;
   }
 }
