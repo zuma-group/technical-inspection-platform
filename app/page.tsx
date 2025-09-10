@@ -42,11 +42,18 @@ export default async function HomePage() {
               Select equipment to begin inspection
             </p>
           </div>
-          <Link href="/templates">
-            <button className="btn btn-secondary">
-              ⚙️ Manage Templates
-            </button>
-          </Link>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <Link href="/dashboard">
+              <button className="btn btn-primary">
+                📊 Dashboard
+              </button>
+            </Link>
+            <Link href="/templates">
+              <button className="btn btn-secondary">
+                ⚙️ Templates
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
       
