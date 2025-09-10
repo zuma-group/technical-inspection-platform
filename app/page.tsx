@@ -1,18 +1,30 @@
-import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { mockEquipment } from '@/lib/mock-data'
 
 export const dynamic = 'force-dynamic'
 
 async function getEquipment() {
-  return await prisma.equipment.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      inspections: {
-        orderBy: { startedAt: 'desc' },
-        take: 1,
+  // Check if DATABASE_URL exists
+  if (!process.env.DATABASE_URL) {
+    console.log('Using mock data - DATABASE_URL not configured')
+    return mockEquipment
+  }
+
+  try {
+    const { prisma } = await import('@/lib/prisma')
+    return await prisma.equipment.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        inspections: {
+          orderBy: { startedAt: 'desc' },
+          take: 1,
+        },
       },
-    },
-  })
+    })
+  } catch (error) {
+    console.error('Database connection failed, using mock data:', error)
+    return mockEquipment
+  }
 }
 
 export default async function HomePage() {

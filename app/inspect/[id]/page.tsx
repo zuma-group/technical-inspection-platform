@@ -1,44 +1,62 @@
-import { prisma } from '@/lib/prisma'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import InspectionClient from './client'
+import { mockInspection, mockEquipment } from '@/lib/mock-data'
 
 export const dynamic = 'force-dynamic'
 
 async function getOrCreateInspection(equipmentId: string) {
-  // Check for existing in-progress inspection
-  let inspection = await prisma.inspection.findFirst({
-    where: {
+  // Check if DATABASE_URL exists
+  if (!process.env.DATABASE_URL) {
+    console.log('Using mock inspection data - DATABASE_URL not configured')
+    // Return mock inspection with the requested equipment
+    const equipment = mockEquipment.find(e => e.id === equipmentId)
+    if (!equipment) {
+      return null
+    }
+    return {
+      ...mockInspection,
       equipmentId,
-      status: 'IN_PROGRESS',
-    },
-    include: {
-      equipment: true,
-      sections: {
-        orderBy: { order: 'asc' },
-        include: {
-          checkpoints: {
-            orderBy: { order: 'asc' },
-            include: {
-              media: true,
+      equipment
+    }
+  }
+
+  try {
+    const { prisma } = await import('@/lib/prisma')
+    
+    // Check for existing in-progress inspection
+    let inspection = await prisma.inspection.findFirst({
+      where: {
+        equipmentId,
+        status: 'IN_PROGRESS',
+      },
+      include: {
+        equipment: true,
+        sections: {
+          orderBy: { order: 'asc' },
+          include: {
+            checkpoints: {
+              orderBy: { order: 'asc' },
+              include: {
+                media: true,
+              },
             },
           },
         },
       },
-    },
-  })
-
-  if (inspection) return inspection
-
-  // Get default user
-  let user = await prisma.user.findFirst()
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        email: 'tech@system.local',
-        name: 'Field Technician',
-      },
     })
-  }
+
+    if (inspection) return inspection
+
+    // Get default user
+    let user = await prisma.user.findFirst()
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: 'tech@system.local',
+          name: 'Field Technician',
+        },
+      })
+    }
 
   // Create new inspection with sections
   const sections = [
@@ -136,7 +154,20 @@ async function getOrCreateInspection(equipmentId: string) {
     },
   })
 
-  return inspection
+    return inspection
+  } catch (error) {
+    console.error('Database connection failed, using mock inspection:', error)
+    // Return mock inspection as fallback
+    const equipment = mockEquipment.find(e => e.id === equipmentId)
+    if (!equipment) {
+      return null
+    }
+    return {
+      ...mockInspection,
+      equipmentId,
+      equipment
+    }
+  }
 }
 
 export default async function InspectPage({
@@ -146,15 +177,35 @@ export default async function InspectPage({
 }) {
   const { id } = await params
   
-  const equipment = await prisma.equipment.findUnique({
-    where: { id },
-  })
-
-  if (!equipment) {
-    notFound()
+  // Check if equipment exists (mock or database)
+  if (!process.env.DATABASE_URL) {
+    const equipment = mockEquipment.find(e => e.id === id)
+    if (!equipment) {
+      notFound()
+    }
+  } else {
+    try {
+      const { prisma } = await import('@/lib/prisma')
+      const equipment = await prisma.equipment.findUnique({
+        where: { id },
+      })
+      if (!equipment) {
+        notFound()
+      }
+    } catch (error) {
+      // Check mock data as fallback
+      const equipment = mockEquipment.find(e => e.id === id)
+      if (!equipment) {
+        notFound()
+      }
+    }
   }
 
   const inspection = await getOrCreateInspection(id)
+  
+  if (!inspection) {
+    notFound()
+  }
 
   return <InspectionClient inspection={inspection} />
 }
