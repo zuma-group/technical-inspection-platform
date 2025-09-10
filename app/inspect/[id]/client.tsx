@@ -124,54 +124,104 @@ export default function InspectionClient({ inspection }) {
   }
 
   return (
-    <div>
-      <div className="header">
-        <div className="container" style={{ padding: '12px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <button
-              onClick={() => router.push('/')}
-              className="btn btn-secondary"
-              style={{ padding: '8px 16px' }}
-            >
-              ← Back
-            </button>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontWeight: '600' }}>{inspection.equipment.model}</div>
-              <div style={{ fontSize: '12px', color: '#6B7280' }}>{inspection.equipment.serial}</div>
+    <div className="inspection-layout">
+      <div className="inspection-sidebar">
+        <div className="header" style={{ position: 'relative' }}>
+          <div className="container" style={{ padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <button
+                onClick={() => router.push('/')}
+                className="btn btn-secondary"
+                style={{ padding: '8px 16px' }}
+              >
+                ← Back
+              </button>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontWeight: '600', fontSize: '16px' }}>{inspection.equipment.model}</div>
+                <div style={{ fontSize: '14px', color: '#6B7280' }}>{inspection.equipment.serial}</div>
+              </div>
+              <div style={{ width: '72px' }}></div>
             </div>
-            <div style={{ width: '72px' }}></div>
+            
+            <div style={{ marginTop: '16px' }}>
+              <div className="progress-bar" style={{ height: '10px' }}>
+                <div className="progress-fill" style={{ width: `${progress}%` }}></div>
+              </div>
+              <div style={{ fontSize: '14px', color: '#6B7280', marginTop: '8px', textAlign: 'center' }}>
+                {completedCheckpoints}/{totalCheckpoints} completed
+              </div>
+            </div>
           </div>
-          
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-          </div>
-          <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-            {completedCheckpoints}/{totalCheckpoints} completed
-          </div>
-        </div>
 
-        <div className="section-tabs" style={{ padding: '0 16px 12px' }}>
-          {inspection.sections.map((s, i) => (
-            <button
-              key={s.id}
-              onClick={() => setCurrentSection(i)}
-              className={`tab ${i === currentSection ? 'active' : ''}`}
-            >
-              {s.code}
-            </button>
-          ))}
+          <div className="section-tabs" style={{ 
+            padding: '0 16px 12px',
+            '@media (min-width: 1024px)': {
+              flexDirection: 'column',
+              gap: '4px'
+            }
+          }}>
+            {inspection.sections.map((s, i) => (
+              <button
+                key={s.id}
+                onClick={() => setCurrentSection(i)}
+                className={`tab ${i === currentSection ? 'active' : ''}`}
+                style={{
+                  '@media (min-width: 1024px)': {
+                    width: '100%',
+                    textAlign: 'left'
+                  }
+                }}
+              >
+                <span style={{ fontWeight: '600' }}>{s.code}</span>
+                <span style={{ 
+                  display: 'none',
+                  '@media (min-width: 1024px)': {
+                    display: 'inline',
+                    marginLeft: '8px',
+                    fontSize: '13px',
+                    opacity: 0.8
+                  }
+                }}>
+                  {s.name}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="container" style={{ paddingTop: '16px', paddingBottom: '80px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-          {section.name}
-        </h2>
+      <div className="inspection-main">
+        <div className="container" style={{ 
+          paddingTop: '16px', 
+          paddingBottom: '80px',
+          '@media (min-width: 1024px)': {
+            paddingTop: '0',
+            paddingBottom: '24px'
+          }
+        }}>
+          <h2 style={{ 
+            fontSize: '18px', 
+            fontWeight: '600', 
+            marginBottom: '16px',
+            '@media (min-width: 768px)': { fontSize: '24px', marginBottom: '20px' },
+            '@media (min-width: 1024px)': { fontSize: '28px', marginBottom: '24px' }
+          }}>
+            {section.name}
+          </h2>
 
-        {section.checkpoints.map(checkpoint => {
-          const cpData = checkpoints[checkpoint.id]
-          return (
-            <div key={checkpoint.id} className="checkpoint">
+          <div style={{
+            display: 'grid',
+            gap: '12px',
+            '@media (min-width: 768px)': { gap: '16px' },
+            '@media (min-width: 1024px)': { gap: '20px' }
+          }}>
+            {section.checkpoints.map(checkpoint => {
+              const cpData = checkpoints[checkpoint.id]
+              return (
+                <div key={checkpoint.id} className="checkpoint" style={{
+                  '@media (min-width: 768px)': { padding: '20px' },
+                  '@media (min-width: 1024px)': { padding: '24px' }
+                }}>
               <div className="checkpoint-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span className="checkpoint-code">{checkpoint.code}</span>
@@ -294,12 +344,25 @@ export default function InspectionClient({ inspection }) {
                   </button>
                 </div>
               )}
-            </div>
-          )
-        })}
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
-      <div className="bottom-bar">
+      <div className="bottom-bar" style={{
+        '@media (min-width: 1024px)': {
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          width: 'auto',
+          background: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          padding: '16px'
+        }
+      }}>
         <button
           onClick={handleComplete}
           disabled={completedCheckpoints < totalCheckpoints || isPending}

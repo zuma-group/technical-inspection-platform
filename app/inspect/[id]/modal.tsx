@@ -71,28 +71,8 @@ export default function CheckpointModal({
   }
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      zIndex: 50,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px'
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        width: '100%',
-        maxWidth: '500px',
-        maxHeight: '90vh',
-        overflow: 'auto',
-        padding: '20px'
-      }}>
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ padding: '20px' }}>
         <div style={{ marginBottom: '20px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
             {status === 'CORRECTED' ? 'Mark as Corrected' : 'Action Required'}
