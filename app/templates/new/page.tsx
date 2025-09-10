@@ -88,7 +88,7 @@ export default function NewTemplatePage() {
     }
 
     try {
-      await createTemplate({
+      const result = await createTemplate({
         name,
         description,
         equipmentType,
@@ -104,7 +104,12 @@ export default function NewTemplatePage() {
           }))
         }))
       })
-      router.push('/templates')
+      console.log('Template created:', result)
+      // Add a small delay to ensure revalidation completes
+      setTimeout(() => {
+        router.push('/templates')
+        router.refresh()
+      }, 100)
     } catch (error) {
       console.error('Failed to create template:', error)
       alert('Failed to create template')

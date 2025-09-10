@@ -2,9 +2,11 @@ import Link from 'next/link'
 import { getTemplates } from './actions'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function TemplatesPage() {
   const templates = await getTemplates()
+  console.log('Templates loaded:', templates.length, templates.map(t => ({ id: t.id, name: t.name })))
 
   return (
     <div className="container">

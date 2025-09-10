@@ -112,27 +112,34 @@ if (typeof global !== 'undefined') {
 
 export const mockStorage = {
   templates: {
-    getAll: () => [...mockTemplates],
+    getAll: () => {
+      console.log('Getting all templates, count:', mockTemplates.length)
+      return [...mockTemplates]
+    },
     
     getById: (id: string) => mockTemplates.find(t => t.id === id),
     
     create: (template: Omit<MockTemplate, 'id' | 'createdAt' | 'updatedAt'>) => {
+      const timestamp = Date.now()
+      const randomId = Math.random().toString(36).substring(7)
       const newTemplate: MockTemplate = {
         ...template,
-        id: `template-${Date.now()}`,
+        id: `template-${timestamp}-${randomId}`,
         createdAt: new Date(),
         updatedAt: new Date(),
         isDefault: false,
-        sections: template.sections.map(section => ({
+        sections: template.sections.map((section, idx) => ({
           ...section,
-          id: section.id || `sec-${Date.now()}-${section.order}`,
-          checkpoints: section.checkpoints.map(cp => ({
+          id: section.id || `sec-${timestamp}-${idx}`,
+          checkpoints: section.checkpoints.map((cp, cpIdx) => ({
             ...cp,
-            id: cp.id || `cp-${Date.now()}-${cp.order}`
+            id: cp.id || `cp-${timestamp}-${idx}-${cpIdx}`
           }))
         }))
       }
       mockTemplates.push(newTemplate)
+      console.log('Template created in mock storage:', newTemplate.id, newTemplate.name)
+      console.log('Total templates now:', mockTemplates.length)
       return newTemplate
     },
     
