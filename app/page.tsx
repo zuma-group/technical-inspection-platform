@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { mockEquipment } from '@/lib/mock-data'
+import { mockStorage } from '@/lib/mock-storage'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,7 +7,7 @@ async function getEquipment() {
   // Check if DATABASE_URL exists
   if (!process.env.DATABASE_URL) {
     console.log('Using mock data - DATABASE_URL not configured')
-    return mockEquipment
+    return mockStorage.equipment.getAll()
   }
 
   try {
@@ -23,7 +23,7 @@ async function getEquipment() {
     })
   } catch (error) {
     console.error('Database connection failed, using mock data:', error)
-    return mockEquipment
+    return mockStorage.equipment.getAll()
   }
 }
 
@@ -50,62 +50,84 @@ export default async function HomePage() {
         </div>
       </div>
       
-      {equipment.length === 0 ? (
-        <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <p style={{ textAlign: 'center', color: '#6B7280', padding: '40px 20px' }}>
-            No equipment found. Add equipment to the database.
-          </p>
-        </div>
-      ) : (
-        <div className="equipment-grid">
-          {equipment.map(item => (
-            <div key={item.id} className="card" style={{ 
-              display: 'flex', 
-              flexDirection: 'column',
-              height: '100%'
-            }}>
-              <div style={{ flex: 1, marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <h2 className="equipment-title">
-                      {item.model}
-                    </h2>
-                    <p className="equipment-subtitle">
-                      {item.type} • {item.serial}
-                    </p>
-                  </div>
-                  <span className={`status-badge status-${item.status.toLowerCase().replace('_', '-')}`}>
-                    {item.status.replace('_', ' ')}
-                  </span>
+      <div className="equipment-grid">
+        {equipment.map(item => (
+          <div key={item.id} className="card" style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            height: '100%'
+          }}>
+            <div style={{ flex: 1, marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <h2 className="equipment-title">
+                    {item.model}
+                  </h2>
+                  <p className="equipment-subtitle">
+                    {item.type} • {item.serial}
+                  </p>
                 </div>
-                
-                <div className="equipment-details">
-                  <div className="equipment-detail-item">
-                    <span className="equipment-icon">📍</span>
-                    <span>{item.location}</span>
-                  </div>
-                  <div className="equipment-detail-item">
-                    <span className="equipment-icon">⏱️</span>
-                    <span>{item.hoursUsed} hours</span>
-                  </div>
-                  {item.inspections[0] && (
-                    <div className="equipment-detail-item">
-                      <span className="equipment-icon">✓</span>
-                      <span>Last: {new Date(item.inspections[0].startedAt).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                </div>
+                <span className={`status-badge status-${item.status.toLowerCase().replace('_', '-')}`}>
+                  {item.status.replace('_', ' ')}
+                </span>
               </div>
               
-              <Link href={`/inspect/${item.id}/select-template`} style={{ textDecoration: 'none' }}>
-                <button className="btn btn-primary" style={{ width: '100%' }}>
-                  Start Inspection
-                </button>
-              </Link>
+              <div className="equipment-details">
+                <div className="equipment-detail-item">
+                  <span className="equipment-icon">📍</span>
+                  <span>{item.location}</span>
+                </div>
+                <div className="equipment-detail-item">
+                  <span className="equipment-icon">⏱️</span>
+                  <span>{item.hoursUsed} hours</span>
+                </div>
+                {item.inspections[0] && (
+                  <div className="equipment-detail-item">
+                    <span className="equipment-icon">✓</span>
+                    <span>Last: {new Date(item.inspections[0].startedAt).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+            
+            <Link href={`/inspect/${item.id}/select-template`} style={{ textDecoration: 'none' }}>
+              <button className="btn btn-primary" style={{ width: '100%' }}>
+                Start Inspection
+              </button>
+            </Link>
+          </div>
+        ))}
+        
+        {/* Add Equipment Card */}
+        <Link href="/equipment/new" style={{ textDecoration: 'none' }}>
+          <div className="card" style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center',
+            minHeight: '240px',
+            cursor: 'pointer',
+            border: '2px dashed #D1D5DB',
+            transition: 'all 0.2s',
+            height: '100%'
+          }}>
+            <div style={{
+              fontSize: '48px',
+              color: '#9CA3AF',
+              marginBottom: '12px'
+            }}>
+              +
+            </div>
+            <p style={{ 
+              fontSize: '16px', 
+              fontWeight: '600',
+              color: '#6B7280'
+            }}>
+              Add Equipment
+            </p>
+          </div>
+        </Link>
+      </div>
     </div>
   )
 }

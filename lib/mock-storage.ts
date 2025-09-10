@@ -1,6 +1,23 @@
 // In-memory storage for mock data when database is not available
 // This will persist during the session but will reset on server restart
 
+interface MockEquipment {
+  id: string
+  type: string
+  model: string
+  serial: string
+  location: string
+  status: 'OPERATIONAL' | 'MAINTENANCE' | 'OUT_OF_SERVICE' | 'IN_INSPECTION'
+  hoursUsed: number
+  createdAt: Date
+  updatedAt: Date
+  inspections: Array<{
+    id: string
+    startedAt: Date
+    status: string
+  }>
+}
+
 interface MockTemplate {
   id: string
   name: string
@@ -245,6 +262,81 @@ export const mockStorage = {
             template.updatedAt = new Date()
             return true
           }
+        }
+      }
+      return false
+    }
+  },
+  
+  equipment: {
+    getAll: () => {
+      if (typeof global !== 'undefined') {
+        if (!global.mockEquipment) {
+          const { mockEquipment } = require('./mock-data')
+          global.mockEquipment = [...mockEquipment]
+        }
+        return [...global.mockEquipment]
+      }
+      const { mockEquipment } = require('./mock-data')
+      return [...mockEquipment]
+    },
+    
+    getById: (id: string) => {
+      const equipment = mockStorage.equipment.getAll()
+      return equipment.find(e => e.id === id)
+    },
+    
+    create: (equipment: Omit<MockEquipment, 'id' | 'createdAt' | 'updatedAt'>) => {
+      const timestamp = Date.now()
+      const randomId = Math.random().toString(36).substring(7)
+      const newEquipment: MockEquipment = {
+        ...equipment,
+        id: `eq-${timestamp}-${randomId}`,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      
+      if (typeof global !== 'undefined') {
+        if (!global.mockEquipment) {
+          const { mockEquipment } = require('./mock-data')
+          global.mockEquipment = [...mockEquipment]
+        }
+        global.mockEquipment.push(newEquipment)
+      }
+      
+      console.log('Equipment created in mock storage:', newEquipment.id)
+      return newEquipment
+    },
+    
+    update: (id: string, updates: Partial<MockEquipment>) => {
+      if (typeof global !== 'undefined') {
+        if (!global.mockEquipment) {
+          const { mockEquipment } = require('./mock-data')
+          global.mockEquipment = [...mockEquipment]
+        }
+        const index = global.mockEquipment.findIndex(e => e.id === id)
+        if (index !== -1) {
+          global.mockEquipment[index] = {
+            ...global.mockEquipment[index],
+            ...updates,
+            updatedAt: new Date()
+          }
+          return global.mockEquipment[index]
+        }
+      }
+      return null
+    },
+    
+    delete: (id: string) => {
+      if (typeof global !== 'undefined') {
+        if (!global.mockEquipment) {
+          const { mockEquipment } = require('./mock-data')
+          global.mockEquipment = [...mockEquipment]
+        }
+        const index = global.mockEquipment.findIndex(e => e.id === id)
+        if (index !== -1) {
+          global.mockEquipment.splice(index, 1)
+          return true
         }
       }
       return false
