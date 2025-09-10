@@ -4,7 +4,7 @@ import { mockInspection, mockEquipment } from '@/lib/mock-data'
 
 export const dynamic = 'force-dynamic'
 
-async function getOrCreateInspection(equipmentId: string) {
+async function getOrCreateInspection(equipmentId: string, templateId?: string) {
   // Check if DATABASE_URL exists
   if (!process.env.DATABASE_URL) {
     console.log('Using mock inspection data - DATABASE_URL not configured')
@@ -58,8 +58,42 @@ async function getOrCreateInspection(equipmentId: string) {
       })
     }
 
-  // Create new inspection with sections
-  const sections = [
+  // If template ID is provided, use the template
+  let sections = []
+  
+  if (templateId) {
+    const template = await prisma.inspectionTemplate.findUnique({
+      where: { id: templateId },
+      include: {
+        sections: {
+          orderBy: { order: 'asc' },
+          include: {
+            checkpoints: {
+              orderBy: { order: 'asc' }
+            }
+          }
+        }
+      }
+    })
+    
+    if (template) {
+      sections = template.sections.map(section => ({
+        name: section.name,
+        code: section.code,
+        order: section.order,
+        checkpoints: section.checkpoints.map(cp => ({
+          code: cp.code,
+          name: cp.name,
+          critical: cp.critical,
+          order: cp.order
+        }))
+      }))
+    }
+  }
+  
+  // If no template or template not found, use default sections
+  if (sections.length === 0) {
+    sections = [
     {
       name: 'Platform & Basket',
       code: 'PB',
@@ -121,6 +155,7 @@ async function getOrCreateInspection(equipmentId: string) {
       ],
     },
   ]
+  }
 
   inspection = await prisma.inspection.create({
     data: {
@@ -172,10 +207,13 @@ async function getOrCreateInspection(equipmentId: string) {
 
 export default async function InspectPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ template?: string }>
 }) {
   const { id } = await params
+  const { template: templateId } = await searchParams
   
   // Check if equipment exists (mock or database)
   if (!process.env.DATABASE_URL) {
@@ -201,7 +239,7 @@ export default async function InspectPage({
     }
   }
 
-  const inspection = await getOrCreateInspection(id)
+  const inspection = await getOrCreateInspection(id, templateId)
   
   if (!inspection) {
     notFound()

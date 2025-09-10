@@ -33,12 +33,21 @@ export default async function HomePage() {
   return (
     <div className="container">
       <div className="page-header">
-        <h1 className="page-title">
-          Equipment Inspection Platform
-        </h1>
-        <p className="page-subtitle">
-          Select equipment to begin inspection
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h1 className="page-title">
+              Equipment Inspection Platform
+            </h1>
+            <p className="page-subtitle">
+              Select equipment to begin inspection
+            </p>
+          </div>
+          <Link href="/templates">
+            <button className="btn btn-secondary">
+              ⚙️ Manage Templates
+            </button>
+          </Link>
+        </div>
       </div>
       
       {equipment.length === 0 ? (
@@ -88,7 +97,7 @@ export default async function HomePage() {
                 </div>
               </div>
               
-              <Link href={`/inspect/${item.id}`} style={{ textDecoration: 'none' }}>
+              <Link href={`/inspect/${item.id}/select-template`} style={{ textDecoration: 'none' }}>
                 <button className="btn btn-primary" style={{ width: '100%' }}>
                   Start Inspection
                 </button>
