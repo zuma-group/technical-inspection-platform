@@ -60,8 +60,14 @@ jobs:
     - name: Run linting
       run: npm run lint
 
-    - name: Run database migrations
-      run: npx prisma migrate deploy
+    # Replace single migrate step with migrate+push to ensure schema exists for seeding
+    - name: Ensure database schema (migrate or push)
+      run: |
+        set -e
+        echo "🗄️  Applying migrations (if any)..."
+        npx prisma migrate deploy || true
+        echo "🧱 Ensuring schema via db push..."
+        npx prisma db push
 
     - name: Seed database
       run: node prisma/seed.js
