@@ -90,8 +90,9 @@ jobs:
         host: ${{ secrets.PROD_EC2_HOST }}
         username: ${{ secrets.PROD_EC2_USER }}
         key: ${{ secrets.PROD_EC2_SSH_KEY }}
-        timeout: 60s
-        command_timeout: 20m
+        timeout: 300s
+        command_timeout: 60m
+        sync: true
         script: |
           # Set up SSH key for GitHub access
           mkdir -p ~/.ssh
@@ -185,14 +186,23 @@ jobs:
           
           # Rebuild and restart containers
           echo "🔨 Building and starting containers..."
-          docker compose -f docker-compose.postgres.yml build
+          echo "🔨 Starting Docker build (this may take several minutes)..."
+          docker compose -f docker-compose.postgres.yml build --progress=plain || {
+            echo "❌ Docker build failed"
+            exit 1
+          }
           docker compose -f docker-compose.postgres.yml up -d
           
           # Clean up SSH key
           rm -f ~/.ssh/deploy_key
           
           # Wait for containers to start
-          sleep 15
+          echo "⏳ Waiting for containers to start..."
+          sleep 10
+          echo "⏳ Still waiting..."
+          sleep 10
+          echo "⏳ Almost ready..."
+          sleep 5
           
           # Check if application is running
           echo "🔍 Checking container status..."
