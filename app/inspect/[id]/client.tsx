@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateCheckpoint, completeInspection } from './actions'
+import { updateCheckpoint, completeInspection, stopInspection } from './actions'
 import CheckpointModal from './modal'
 
 export default function InspectionClient({ inspection }) {
@@ -123,6 +123,23 @@ export default function InspectionClient({ inspection }) {
     }
   }
 
+  const handleStopInspection = () => {
+    const confirmed = confirm(
+      'Are you sure you want to stop this inspection? All progress will be lost and you will need to start over.'
+    )
+    
+    if (confirmed) {
+      startTransition(async () => {
+        const result = await stopInspection(inspection.id)
+        if (result.success) {
+          router.push(`/inspect/${inspection.equipmentId}/select-template`)
+        } else {
+          alert('Failed to stop inspection. Please try again.')
+        }
+      })
+    }
+  }
+
   return (
     <div className="inspection-layout">
       <div className="inspection-sidebar">
@@ -175,6 +192,20 @@ export default function InspectionClient({ inspection }) {
               style={{ width: '100%', marginTop: '20px' }}
             >
               Complete Inspection ({completedCheckpoints}/{totalCheckpoints})
+            </button>
+            
+            <button
+              onClick={handleStopInspection}
+              disabled={isPending}
+              className="btn btn-danger"
+              style={{ 
+                width: '100%', 
+                marginTop: '12px',
+                opacity: 0.8
+              }}
+              title="Stop inspection and start over"
+            >
+              Stop Inspection
             </button>
           </div>
         </div>

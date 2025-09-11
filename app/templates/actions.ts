@@ -10,7 +10,7 @@ export async function getTemplates() {
 
   try {
     const { prisma } = await import('@/lib/prisma')
-    return await prisma.inspectionTemplate.findMany({
+    const templates = await prisma.inspectionTemplate.findMany({
       include: {
         sections: {
           orderBy: { order: 'asc' },
@@ -23,6 +23,8 @@ export async function getTemplates() {
       },
       orderBy: { createdAt: 'desc' }
     })
+    
+    return templates
   } catch (error) {
     console.error('Failed to fetch templates:', error)
     return mockStorage.templates.getAll()
@@ -81,12 +83,14 @@ export async function createTemplate(data: {
 
   try {
     const { prisma } = await import('@/lib/prisma')
+    
+    // Now that parentTemplateId is in the schema, we can use it directly
     const template = await prisma.inspectionTemplate.create({
       data: {
         name: data.name,
         description: data.description,
         equipmentType: data.equipmentType,
-        parentTemplateId: data.parentTemplateId,
+        parentTemplateId: data.parentTemplateId || null,
         sections: {
           create: data.sections.map(section => ({
             name: section.name,
@@ -99,6 +103,8 @@ export async function createTemplate(data: {
         }
       }
     })
+    
+    console.log('Template created successfully:', template.id, 'Parent:', template.parentTemplateId)
     revalidatePath('/templates')
     return template
   } catch (error) {

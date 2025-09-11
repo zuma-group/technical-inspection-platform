@@ -32,6 +32,32 @@ export async function updateCheckpoint(
   }
 }
 
+export async function stopInspection(inspectionId: string) {
+  // Check if DATABASE_URL exists
+  if (!process.env.DATABASE_URL) {
+    console.log('Mock mode: Inspection stop simulated', { inspectionId })
+    revalidatePath('/')
+    revalidatePath('/inspect/[id]')
+    return { success: true }
+  }
+
+  try {
+    const { prisma } = await import('@/lib/prisma')
+    
+    // Delete the inspection and all related data (cascading delete will handle sections, checkpoints, media)
+    await prisma.inspection.delete({
+      where: { id: inspectionId }
+    })
+    
+    revalidatePath('/')
+    revalidatePath('/inspect/[id]')
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to stop inspection:', error)
+    return { success: false, error: 'Failed to stop inspection' }
+  }
+}
+
 export async function completeInspection(inspectionId: string) {
   // Check if DATABASE_URL exists
   if (!process.env.DATABASE_URL) {

@@ -139,30 +139,46 @@ export default function NewTemplatePage() {
   }
 
   const handleSubmit = async () => {
-    // Only validate non-inherited sections
-    const nonInheritedSections = sections.filter(s => !s.inherited)
-    if (!name || nonInheritedSections.some(s => !s.name || !s.code)) {
-      alert('Please fill in all required fields')
+    if (!name) {
+      alert('Please enter a template name')
+      return
+    }
+    
+    // For templates without a parent, we need at least one section
+    if (!parentTemplateId && sections.length === 0) {
+      alert('Please add at least one section')
+      return
+    }
+    
+    // Validate that all sections have required fields
+    // Inherited sections should already have valid data from parent
+    const invalidSections = sections.filter(s => !s.name || !s.code)
+    if (invalidSections.length > 0) {
+      alert('Please fill in all required fields for sections')
       return
     }
 
     try {
+      // When creating a child template, include ALL sections (inherited + new)
+      // This way the child has a complete copy of parent sections plus its own
+      const sectionsToCreate = sections.map((s, idx) => ({
+        name: s.name,
+        code: s.code,
+        order: idx + 1,
+        checkpoints: s.checkpoints.map((cp, cpIdx) => ({
+          code: cp.code,
+          name: cp.name,
+          critical: cp.critical,
+          order: cpIdx + 1
+        }))
+      }))
+      
       const result = await createTemplate({
         name,
         description,
         equipmentType,
         parentTemplateId: parentTemplateId || undefined,
-        sections: sections.map((s, idx) => ({
-          name: s.name,
-          code: s.code,
-          order: idx + 1,
-          checkpoints: s.checkpoints.map((cp, cpIdx) => ({
-            code: cp.code,
-            name: cp.name,
-            critical: cp.critical,
-            order: cpIdx + 1
-          }))
-        }))
+        sections: sectionsToCreate
       })
       console.log('Template created:', result)
       // Add a small delay to ensure revalidation completes
