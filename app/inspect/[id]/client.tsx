@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { updateCheckpoint, completeInspection, stopInspection } from './actions'
 import CheckpointModal from './modal'
+import { Icons, iconSizes } from '@/lib/icons'
 
 export default function InspectionClient({ inspection }) {
   const router = useRouter()
@@ -142,55 +143,56 @@ export default function InspectionClient({ inspection }) {
   }
 
   return (
-    <div className="inspection-layout">
-      <div className="inspection-sidebar">
-        <div className="header" style={{ position: 'relative', background: 'transparent', border: 'none' }}>
-          <div className="header-content">
+    <div className="flex h-screen">
+      <div className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
+        <div className="p-4 flex-1 flex flex-col">
+          <div className="mb-4">
             <button
               onClick={() => router.push('/')}
-              className="btn btn-secondary back-button"
-              style={{ padding: '8px 12px', marginBottom: '16px', fontSize: '14px' }}
+              className="btn btn-secondary inline-flex items-center gap-2 py-2 px-3 text-sm w-full"
             >
-              ← Back
+              <Icons.back className={iconSizes.sm} />
+              <span>Back</span>
             </button>
-            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-              <div style={{ fontWeight: '600', fontSize: '16px' }}>{inspection.equipment.model}</div>
-              <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>{inspection.equipment.serial}</div>
+            <div className="text-center mt-4">
+              <div className="font-semibold text-base">{inspection.equipment.model}</div>
+              <div className="text-sm text-gray-500 mt-1">{inspection.equipment.serial}</div>
             </div>
             
-            <div style={{ marginTop: '16px' }}>
-              <div className="progress-bar" style={{ height: '10px' }}>
-                <div className="progress-fill" style={{ width: `${progress}%` }}></div>
+            <div className="mt-4">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
               </div>
-              <div style={{ fontSize: '14px', color: '#6B7280', marginTop: '8px', textAlign: 'center' }}>
+              <div className="text-sm text-gray-600 mt-2 text-center">
                 {completedCheckpoints}/{totalCheckpoints} completed
               </div>
             </div>
           </div>
 
-          <div className="section-tabs">
+          <div className="flex-1 overflow-y-auto mt-4">
             {inspection.sections.map((s, i) => (
               <button
                 key={s.id}
                 onClick={() => setCurrentSection(i)}
-                className={`tab ${i === currentSection ? 'active' : ''}`}
+                className={`w-full text-left p-3 mb-2 rounded-lg transition-all ${
+                  i === currentSection 
+                    ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-600' 
+                    : 'hover:bg-gray-100'
+                }`}
               >
-                <div>
-                  <div style={{ fontWeight: '600' }}>{s.code}</div>
-                  <div className="tab-full-name">
-                    {s.name}
-                  </div>
+                <div className="font-semibold">{s.code}</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {s.name}
                 </div>
               </button>
             ))}
           </div>
           
-          <div className="sidebar-complete-button">
+          <div className="mt-auto pt-4 border-t border-gray-200">
             <button
               onClick={handleComplete}
               disabled={completedCheckpoints < totalCheckpoints || isPending}
-              className="btn btn-primary"
-              style={{ width: '100%', marginTop: '20px' }}
+              className="btn btn-primary w-full mb-3"
             >
               Complete Inspection ({completedCheckpoints}/{totalCheckpoints})
             </button>
@@ -198,12 +200,7 @@ export default function InspectionClient({ inspection }) {
             <button
               onClick={handleStopInspection}
               disabled={isPending}
-              className="btn btn-danger"
-              style={{ 
-                width: '100%', 
-                marginTop: '12px',
-                opacity: 0.8
-              }}
+              className="btn btn-danger w-full opacity-80 hover:opacity-100"
               title="Stop inspection and start over"
             >
               Stop Inspection
@@ -212,95 +209,65 @@ export default function InspectionClient({ inspection }) {
         </div>
       </div>
 
-      <div className="inspection-main">
-        <div className="container inspection-container">
-          <h2 className="section-title">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
             {section.name}
           </h2>
 
-          <div className="checkpoints-grid">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {section.checkpoints.map(checkpoint => {
               const cpData = checkpoints[checkpoint.id]
               return (
-                <div key={checkpoint.id} className="checkpoint">
-              <div className="checkpoint-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="checkpoint-code">{checkpoint.code}</span>
+                <div key={checkpoint.id} className="card">
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-semibold text-gray-600">{checkpoint.code}</span>
                   {checkpoint.critical && (
-                    <span className="critical-badge">CRITICAL</span>
+                    <span className="px-2 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-full">CRITICAL</span>
                   )}
                 </div>
-                <div className="checkpoint-name">{checkpoint.name}</div>
+                <div className="text-gray-900 font-medium">{checkpoint.name}</div>
               </div>
 
               {cpData.status ? (
                 <>
-                  <div style={{
-                    padding: '12px',
-                    borderRadius: '6px',
-                    textAlign: 'center',
-                    fontWeight: '600',
-                    background: cpData.status === 'PASS' ? '#D1FAE5' :
-                               cpData.status === 'CORRECTED' ? '#FEF3C7' : '#FEE2E2',
-                    color: cpData.status === 'PASS' ? '#065F46' :
-                           cpData.status === 'CORRECTED' ? '#92400E' : '#991B1B',
-                  }}>
+                  <div className={`p-3 rounded-md text-center font-semibold ${
+                    cpData.status === 'PASS' ? 'bg-green-100 text-green-800' :
+                    cpData.status === 'CORRECTED' ? 'bg-yellow-100 text-yellow-800' : 
+                    'bg-red-100 text-red-800'
+                  }`}>
                     {cpData.status.replace('_', ' ')}
                   </div>
                   
                   {/* Show notes if exists */}
                   {cpData.notes && (
-                    <div style={{ 
-                      marginTop: '12px', 
-                      padding: '8px', 
-                      background: '#F3F4F6', 
-                      borderRadius: '6px',
-                      fontSize: '14px'
-                    }}>
+                    <div className="mt-3 p-2 bg-gray-100 rounded-md text-sm">
                       <strong>Notes:</strong> {cpData.notes}
                     </div>
                   )}
                   
                   {/* Show estimated hours if exists */}
                   {cpData.estimatedHours && (
-                    <div style={{ 
-                      marginTop: '8px', 
-                      fontSize: '14px',
-                      color: '#6B7280'
-                    }}>
+                    <div className="mt-2 text-sm text-gray-600">
                       <strong>Estimated Hours:</strong> {cpData.estimatedHours}
                     </div>
                   )}
                   
                   {/* Show media thumbnails */}
                   {cpData.media && cpData.media.length > 0 && (
-                    <div style={{ 
-                      marginTop: '12px', 
-                      display: 'flex', 
-                      gap: '8px',
-                      overflowX: 'auto'
-                    }}>
+                    <div className="mt-3 flex gap-2 overflow-x-auto">
                       {cpData.media.map((m: { id: string; type: string }) => (
                         <a 
                           key={m.id} 
                           href={`/api/media/${m.id}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          style={{ flexShrink: 0 }}
+                          className="flex-shrink-0"
                         >
                           {m.type === 'video' ? (
-                            <div style={{
-                              width: '60px',
-                              height: '60px',
-                              background: '#3B82F6',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                              fontSize: '24px'
-                            }}>
-                              📹
+                            <div className="w-[60px] h-[60px] bg-blue-500 rounded-lg flex items-center justify-center text-white">
+                              <Icons.video className={iconSizes.lg} />
                             </div>
                           ) : (
                             <Image
@@ -308,11 +275,7 @@ export default function InspectionClient({ inspection }) {
                               alt="Inspection media"
                               width={60}
                               height={60}
-                              style={{
-                                objectFit: 'cover',
-                                borderRadius: '8px',
-                                border: '2px solid #E5E7EB'
-                              }}
+                              className="object-cover rounded-lg border-2 border-gray-300"
                             />
                           )}
                         </a>
@@ -321,24 +284,24 @@ export default function InspectionClient({ inspection }) {
                   )}
                 </>
               ) : (
-                <div className="action-buttons">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'PASS')}
-                    className="btn btn-success"
+                    className="btn btn-success text-sm py-2"
                     disabled={isPending}
                   >
                     Pass
                   </button>
                   <button
                     onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'CORRECTED')}
-                    className="btn btn-warning"
+                    className="btn btn-warning text-sm py-2"
                     disabled={isPending}
                   >
                     Corrected
                   </button>
                   <button
                     onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'ACTION_REQUIRED')}
-                    className="btn btn-danger"
+                    className="btn btn-danger text-sm py-2"
                     disabled={isPending}
                   >
                     Action
@@ -352,12 +315,11 @@ export default function InspectionClient({ inspection }) {
         </div>
       </div>
 
-      <div className="bottom-bar mobile-only">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden">
         <button
           onClick={handleComplete}
           disabled={completedCheckpoints < totalCheckpoints || isPending}
-          className="btn btn-primary"
-          style={{ width: '100%' }}
+          className="btn btn-primary w-full"
         >
           Complete Inspection ({completedCheckpoints}/{totalCheckpoints})
         </button>

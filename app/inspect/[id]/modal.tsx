@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import Image from 'next/image'
+import { Icons, iconSizes } from '@/lib/icons'
 
 interface ModalProps {
   isOpen: boolean
@@ -73,51 +74,51 @@ export default function CheckpointModal({
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
+      <div className="modal-content p-5">
+        <div className="mb-5">
+          <h2 className="text-xl font-semibold mb-2">
             {status === 'CORRECTED' ? 'Mark as Corrected' : 'Action Required'}
           </h2>
-          <p style={{ fontSize: '14px', color: '#6B7280' }}>{checkpointName}</p>
+          <p className="text-sm text-gray-500">{checkpointName}</p>
         </div>
 
         {/* Media capture buttons */}
-        <div style={{ marginBottom: '20px' }}>
-          <p style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
+        <div className="mb-5">
+          <p className="text-sm font-semibold mb-3">
             Add Photos/Videos
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+          <div className="grid grid-cols-2 gap-2 mb-2">
             <button
               type="button"
               onClick={() => photoInputRef.current?.click()}
-              className="btn btn-secondary"
-              style={{ fontSize: '14px', padding: '12px' }}
+              className="btn btn-secondary text-sm py-3 flex items-center justify-center gap-2"
             >
-              📷 Take Photo
+              <Icons.camera className={iconSizes.sm} />
+              <span>Take Photo</span>
             </button>
             <button
               type="button"
               onClick={() => videoInputRef.current?.click()}
-              className="btn btn-secondary"
-              style={{ fontSize: '14px', padding: '12px' }}
+              className="btn btn-secondary text-sm py-3 flex items-center justify-center gap-2"
             >
-              📹 Take Video
+              <Icons.video className={iconSizes.sm} />
+              <span>Take Video</span>
             </button>
             <button
               type="button"
               onClick={() => uploadPhotoRef.current?.click()}
-              className="btn btn-secondary"
-              style={{ fontSize: '14px', padding: '12px' }}
+              className="btn btn-secondary text-sm py-3 flex items-center justify-center gap-2"
             >
-              📤 Upload Photo
+              <Icons.upload className={iconSizes.sm} />
+              <span>Upload Photo</span>
             </button>
             <button
               type="button"
               onClick={() => uploadVideoRef.current?.click()}
-              className="btn btn-secondary"
-              style={{ fontSize: '14px', padding: '12px' }}
+              className="btn btn-secondary text-sm py-3 flex items-center justify-center gap-2"
             >
-              📤 Upload Video
+              <Icons.upload className={iconSizes.sm} />
+              <span>Upload Video</span>
             </button>
           </div>
 
@@ -127,7 +128,7 @@ export default function CheckpointModal({
             type="file"
             accept="image/*"
             capture="environment"
-            style={{ display: 'none' }}
+            className="hidden"
             onChange={(e) => handleMediaCapture(e.target.files, 'photo')}
           />
           <input
@@ -135,33 +136,33 @@ export default function CheckpointModal({
             type="file"
             accept="video/*"
             capture="environment"
-            style={{ display: 'none' }}
+            className="hidden"
             onChange={(e) => handleMediaCapture(e.target.files, 'video')}
           />
           <input
             ref={uploadPhotoRef}
             type="file"
             accept="image/*"
-            style={{ display: 'none' }}
+            className="hidden"
             onChange={(e) => handleMediaCapture(e.target.files, 'photo')}
           />
           <input
             ref={uploadVideoRef}
             type="file"
             accept="video/*"
-            style={{ display: 'none' }}
+            className="hidden"
             onChange={(e) => handleMediaCapture(e.target.files, 'video')}
           />
 
           {/* Media previews */}
           {mediaPreviews.length > 0 && (
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginTop: '12px' }}>
+            <div className="flex gap-2 overflow-x-auto mt-3">
               {mediaPreviews.map((preview, index) => (
-                <div key={index} style={{ position: 'relative', flexShrink: 0 }}>
+                <div key={index} className="relative flex-shrink-0">
                   {mediaFiles[index].type.startsWith('video') ? (
                     <video
                       src={preview}
-                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
+                      className="w-20 h-20 object-cover rounded-lg"
                     />
                   ) : (
                     <Image
@@ -169,26 +170,14 @@ export default function CheckpointModal({
                       alt="Preview"
                       width={80}
                       height={80}
-                      style={{ objectFit: 'cover', borderRadius: '8px' }}
+                      className="object-cover rounded-lg"
                     />
                   )}
                   <button
                     onClick={() => removeMedia(index)}
-                    style={{
-                      position: 'absolute',
-                      top: '-8px',
-                      right: '-8px',
-                      background: '#EF4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '24px',
-                      height: '24px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center hover:bg-red-600"
                   >
-                    ✕
+                    <Icons.close className="w-3 h-3" />
                   </button>
                 </div>
               ))}
@@ -197,22 +186,15 @@ export default function CheckpointModal({
         </div>
 
         {/* Notes field */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+        <div className="mb-5">
+          <label className="block text-sm font-semibold mb-2">
             {status === 'CORRECTED' ? 'What was corrected?' : 'What needs to be done?'}
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={4}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px',
-              resize: 'vertical'
-            }}
+            className="form-textarea"
             placeholder={status === 'CORRECTED' 
               ? 'Describe what was corrected...' 
               : 'Describe the problem and solution needed...'}
@@ -221,8 +203,8 @@ export default function CheckpointModal({
 
         {/* Hours estimate (Action Required only) */}
         {status === 'ACTION_REQUIRED' && (
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+          <div className="mb-5">
+            <label className="block text-sm font-semibold mb-2">
               Estimated Hours to Fix
             </label>
             <input
@@ -231,31 +213,23 @@ export default function CheckpointModal({
               onChange={(e) => setEstimatedHours(e.target.value)}
               step="0.5"
               min="0"
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #E5E7EB',
-                borderRadius: '8px',
-                fontSize: '16px'
-              }}
+              className="form-input"
               placeholder="Enter hours (e.g., 2.5)"
             />
           </div>
         )}
 
         {/* Action buttons */}
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="btn btn-secondary"
-            style={{ flex: 1 }}
+            className="btn btn-secondary flex-1"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className={`btn ${status === 'CORRECTED' ? 'btn-warning' : 'btn-danger'}`}
-            style={{ flex: 1 }}
+            className={`btn ${status === 'CORRECTED' ? 'btn-warning' : 'btn-danger'} flex-1`}
             disabled={!notes.trim()}
           >
             Submit

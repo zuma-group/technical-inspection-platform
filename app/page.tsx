@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { InspectionStatus } from '@prisma/client'
+import { Icons, iconSizes } from '@/lib/icons'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,49 +40,40 @@ export default async function HomePage() {
 
   if (!equipment || equipment.length === 0) {
     return (
-      <div className="container">
-        <div className="page-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
-              <h1 className="page-title">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Equipment Inspection Platform
               </h1>
-              <p className="page-subtitle">
+              <p className="text-gray-600">
                 No equipment found. Add equipment to begin.
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div className="flex gap-3 flex-wrap">
               <Link href="/dashboard">
-                <button className="btn btn-primary">
-                  📊 Dashboard
+                <button className="btn btn-primary inline-flex items-center gap-2">
+                  <Icons.dashboard className={iconSizes.sm} />
+                  <span>Dashboard</span>
                 </button>
               </Link>
               <Link href="/templates">
-                <button className="btn btn-secondary">
-                  ⚙️ Templates
+                <button className="btn btn-secondary inline-flex items-center gap-2">
+                  <Icons.settings className={iconSizes.sm} />
+                  <span>Templates</span>
                 </button>
               </Link>
             </div>
           </div>
         </div>
         
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '48px' }}>
-          <Link href="/equipment/new" style={{ textDecoration: 'none' }}>
-            <div className="card" style={{ 
-              display: 'flex', 
-              flexDirection: 'column',
-              alignItems: 'center', 
-              justifyContent: 'center',
-              minHeight: '240px',
-              cursor: 'pointer',
-              border: '2px dashed #D1D5DB',
-              transition: 'all 0.2s',
-              padding: '32px',
-              maxWidth: '400px'
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>➕</div>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Add Equipment</h3>
-              <p style={{ color: '#6B7280', textAlign: 'center' }}>
+        <div className="flex justify-center mt-12">
+          <Link href="/equipment/new" className="no-underline">
+            <div className="card flex flex-col items-center justify-center min-h-[240px] cursor-pointer border-2 border-dashed border-gray-300 hover:border-gray-400 transition-all p-8 max-w-md">
+              <Icons.addCircle className="w-12 h-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Add Equipment</h3>
+              <p className="text-gray-500 text-center">
                 Register new equipment to start inspections
               </p>
             </div>
@@ -92,26 +84,28 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="container">
-      <div className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '16px' }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
-            <h1 className="page-title">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Equipment Inspection Platform
             </h1>
-            <p className="page-subtitle">
+            <p className="text-gray-600">
               Select equipment to begin inspection
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div className="flex gap-3 flex-wrap">
             <Link href="/dashboard">
-              <button className="btn btn-primary">
-                📊 Dashboard
+              <button className="btn btn-primary inline-flex items-center gap-2">
+                <Icons.dashboard className={iconSizes.sm} />
+                <span>Dashboard</span>
               </button>
             </Link>
             <Link href="/templates">
-              <button className="btn btn-secondary">
-                ⚙️ Templates
+              <button className="btn btn-secondary inline-flex items-center gap-2">
+                <Icons.settings className={iconSizes.sm} />
+                <span>Templates</span>
               </button>
             </Link>
           </div>
@@ -120,58 +114,59 @@ export default async function HomePage() {
       
       <div className="equipment-grid">
         {equipment.map(item => (
-          <div key={item.id} className="card" style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            height: '100%'
-          }}>
-            <div style={{ flex: 1, marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                <div style={{ flex: 1 }}>
-                  <h2 className="equipment-title">
+          <div key={item.id} className="card flex flex-col h-full">
+            <div className="flex-1 mb-4">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold text-gray-900">
                     {item.model}
                   </h2>
-                  <p className="equipment-subtitle">
+                  <p className="text-sm text-gray-600">
                     {item.type.replace('_', ' ')} • {item.serial}
                   </p>
                 </div>
-                <span className={`status-badge status-${item.status.toLowerCase().replace('_', '-')}`}>
+                <span className={`status-badge ${
+                  item.status === 'OPERATIONAL' ? 'status-operational' :
+                  item.status === 'MAINTENANCE' ? 'status-maintenance' :
+                  item.status === 'OUT_OF_SERVICE' ? 'status-out_of_service' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
                   {item.status.replace('_', ' ')}
                 </span>
               </div>
               
-              <div className="equipment-details">
-                <div className="equipment-detail-item">
-                  <span className="equipment-icon">📍</span>
-                  <span>{item.location}</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Icons.location className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">{item.location}</span>
                 </div>
-                <div className="equipment-detail-item">
-                  <span className="equipment-icon">⏱️</span>
-                  <span>{item.hoursUsed} hours</span>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Icons.timer className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">{item.hoursUsed} hours</span>
                 </div>
                 {item.hasInProgressInspection ? (
-                  <div className="equipment-detail-item" style={{ color: '#F59E0B' }}>
-                    <span className="equipment-icon">⚠️</span>
-                    <span style={{ fontWeight: '600' }}>Inspection in progress</span>
+                  <div className="flex items-center gap-2 text-amber-500">
+                    <Icons.warning className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-sm font-semibold">Inspection in progress</span>
                   </div>
                 ) : item.inspections && item.inspections[0] && (
-                  <div className="equipment-detail-item">
-                    <span className="equipment-icon">✓</span>
-                    <span>Last: {new Date(item.inspections[0].startedAt).toLocaleDateString()}</span>
+                  <div className="flex items-center gap-2 text-green-600">
+                    <Icons.checkCircle className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-sm">Last: {new Date(item.inspections[0].startedAt).toLocaleDateString()}</span>
                   </div>
                 )}
               </div>
             </div>
             
             {item.hasInProgressInspection ? (
-              <Link href={`/inspect/${item.id}`} style={{ textDecoration: 'none' }}>
-                <button className="btn btn-warning" style={{ width: '100%' }}>
+              <Link href={`/inspect/${item.id}`} className="no-underline">
+                <button className="btn btn-warning w-full">
                   Resume Inspection
                 </button>
               </Link>
             ) : (
-              <Link href={`/inspect/${item.id}/select-template`} style={{ textDecoration: 'none' }}>
-                <button className="btn btn-primary" style={{ width: '100%' }}>
+              <Link href={`/inspect/${item.id}/select-template`} className="no-underline">
+                <button className="btn btn-primary w-full">
                   Start Inspection
                 </button>
               </Link>
@@ -180,21 +175,11 @@ export default async function HomePage() {
         ))}
         
         {/* Add Equipment Card */}
-        <Link href="/equipment/new" style={{ textDecoration: 'none' }}>
-          <div className="card" style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center', 
-            justifyContent: 'center',
-            minHeight: '240px',
-            cursor: 'pointer',
-            border: '2px dashed #D1D5DB',
-            transition: 'all 0.2s',
-            height: '100%'
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>➕</div>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Add Equipment</h3>
-            <p style={{ color: '#6B7280', textAlign: 'center' }}>
+        <Link href="/equipment/new" className="no-underline">
+          <div className="card flex flex-col items-center justify-center min-h-[240px] cursor-pointer border-2 border-dashed border-gray-300 hover:border-gray-400 transition-all h-full">
+            <Icons.addCircle className="w-12 h-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Add Equipment</h3>
+            <p className="text-gray-500 text-center">
               Register new equipment
             </p>
           </div>

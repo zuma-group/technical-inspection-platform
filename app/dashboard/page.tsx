@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getDashboardData } from './actions'
+import { Icons, iconSizes } from '@/lib/icons'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -33,29 +34,31 @@ export default async function DashboardPage() {
   })
 
   return (
-    <div className="container">
-      <div className="page-header">
-        <div style={{ marginBottom: '24px' }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-8">
+        <div className="mb-6">
           <Link href="/">
-            <button className="btn btn-secondary" style={{ padding: '8px 16px' }}>
-              ← Back to Equipment
+            <button className="btn btn-secondary inline-flex items-center gap-2 px-4 py-2">
+              <Icons.back className={iconSizes.sm} />
+              <span>Back to Equipment</span>
             </button>
           </Link>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="page-title">Inspection Dashboard</h1>
-            <p className="page-subtitle">Overview of equipment inspections and status</p>
+            <h1 className="text-3xl font-bold text-gray-900">Inspection Dashboard</h1>
+            <p className="text-gray-600 mt-1">Overview of equipment inspections and status</p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="flex gap-3">
             <Link href="/templates">
               <button className="btn btn-secondary">
                 Manage Templates
               </button>
             </Link>
             <Link href="/equipment/new">
-              <button className="btn btn-primary">
-                + Add Equipment
+              <button className="btn btn-primary inline-flex items-center gap-2">
+                <Icons.add className={iconSizes.sm} />
+                <span>Add Equipment</span>
               </button>
             </Link>
           </div>
@@ -63,53 +66,48 @@ export default async function DashboardPage() {
       </div>
 
       {/* Metrics Cards */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: '20px',
-        marginBottom: '32px'
-      }}>
-        <div className="card" style={{ textAlign: 'center' }}>
-          <h3 style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px', fontWeight: '600' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <div className="stat-card text-center">
+          <h3 className="text-sm text-gray-500 mb-2 font-semibold uppercase">
             TOTAL EQUIPMENT
           </h3>
-          <p style={{ fontSize: '36px', fontWeight: '700', color: '#111827' }}>
+          <p className="stat-value text-gray-900">
             {totalEquipment}
           </p>
         </div>
 
-        <div className="card" style={{ textAlign: 'center' }}>
-          <h3 style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px', fontWeight: '600' }}>
+        <div className="stat-card text-center">
+          <h3 className="text-sm text-gray-500 mb-2 font-semibold uppercase">
             OPERATIONAL
           </h3>
-          <p style={{ fontSize: '36px', fontWeight: '700', color: '#10B981' }}>
+          <p className="stat-value text-green-500">
             {operationalCount}
           </p>
-          <p style={{ fontSize: '13px', color: '#6B7280' }}>
+          <p className="stat-label">
             {Math.round((operationalCount / totalEquipment) * 100)}% of fleet
           </p>
         </div>
 
-        <div className="card" style={{ textAlign: 'center' }}>
-          <h3 style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px', fontWeight: '600' }}>
+        <div className="stat-card text-center">
+          <h3 className="text-sm text-gray-500 mb-2 font-semibold uppercase">
             NEEDS ATTENTION
           </h3>
-          <p style={{ fontSize: '36px', fontWeight: '700', color: '#F59E0B' }}>
+          <p className="stat-value text-amber-500">
             {maintenanceCount}
           </p>
-          <p style={{ fontSize: '13px', color: '#6B7280' }}>
+          <p className="stat-label">
             In maintenance
           </p>
         </div>
 
-        <div className="card" style={{ textAlign: 'center' }}>
-          <h3 style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px', fontWeight: '600' }}>
+        <div className="stat-card text-center">
+          <h3 className="text-sm text-gray-500 mb-2 font-semibold uppercase">
             OUT OF SERVICE
           </h3>
-          <p style={{ fontSize: '36px', fontWeight: '700', color: '#EF4444' }}>
+          <p className="stat-value text-red-500">
             {outOfServiceCount}
           </p>
-          <p style={{ fontSize: '13px', color: '#6B7280' }}>
+          <p className="stat-label">
             Requires repair
           </p>
         </div>
@@ -292,8 +290,9 @@ export default async function DashboardPage() {
             )}
           </h2>
           {overdueEquipment.length === 0 ? (
-            <p style={{ color: '#10B981', textAlign: 'center', padding: '20px' }}>
-              ✓ All equipment inspections are up to date
+            <p className="text-green-500 text-center p-5 flex items-center justify-center gap-2">
+              <Icons.checkCircle className={iconSizes.md} />
+              <span>All equipment inspections are up to date</span>
             </p>
           ) : (
             <div style={{ display: 'grid', gap: '12px' }}>
