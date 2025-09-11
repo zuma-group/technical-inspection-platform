@@ -93,8 +93,9 @@ jobs:
         script: |
           # Set up SSH key for GitHub access
           mkdir -p ~/.ssh
-          printf "%s" "${{ secrets.PROD_DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          sed -i 's/\r$//' ~/.ssh/deploy_key
+          cat << 'EOF' > ~/.ssh/deploy_key
+          ${{ secrets.PROD_DEPLOY_SSH_KEY }}
+          EOF
           chmod 600 ~/.ssh/deploy_key
           
           # Add GitHub to known hosts
