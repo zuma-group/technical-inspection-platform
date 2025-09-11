@@ -343,5 +343,95 @@ export const mockStorage = {
       }
       return false
     }
+  },
+  
+  inspections: {
+    getAll: () => {
+      // Generate mock inspection history
+      const mockInspections = [
+        {
+          id: 'insp-1',
+          equipmentId: '1',
+          startedAt: new Date('2024-03-15'),
+          completedAt: new Date('2024-03-15'),
+          status: 'COMPLETED',
+          technicianName: 'John Smith',
+          criticalIssues: 0,
+          nonCriticalIssues: 2
+        },
+        {
+          id: 'insp-2',
+          equipmentId: '2',
+          startedAt: new Date('2024-03-10'),
+          completedAt: new Date('2024-03-10'),
+          status: 'COMPLETED',
+          technicianName: 'Jane Doe',
+          criticalIssues: 1,
+          nonCriticalIssues: 3
+        },
+        {
+          id: 'insp-3',
+          equipmentId: '3',
+          startedAt: new Date('2024-03-21'),
+          completedAt: null,
+          status: 'IN_PROGRESS',
+          technicianName: 'Mike Johnson',
+          criticalIssues: 0,
+          nonCriticalIssues: 0
+        },
+        {
+          id: 'insp-4',
+          equipmentId: '4',
+          startedAt: new Date('2024-03-01'),
+          completedAt: new Date('2024-03-01'),
+          status: 'COMPLETED',
+          technicianName: 'Sarah Wilson',
+          criticalIssues: 2,
+          nonCriticalIssues: 5
+        },
+        {
+          id: 'insp-5',
+          equipmentId: '1',
+          startedAt: new Date('2024-02-15'),
+          completedAt: new Date('2024-02-15'),
+          status: 'COMPLETED',
+          technicianName: 'John Smith',
+          criticalIssues: 0,
+          nonCriticalIssues: 1
+        },
+        {
+          id: 'insp-6',
+          equipmentId: '2',
+          startedAt: new Date('2024-02-10'),
+          completedAt: new Date('2024-02-10'),
+          status: 'COMPLETED',
+          technicianName: 'Jane Doe',
+          criticalIssues: 0,
+          nonCriticalIssues: 0
+        },
+        {
+          id: 'insp-7',
+          equipmentId: '1',
+          startedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+          completedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+          status: 'COMPLETED',
+          technicianName: 'John Smith',
+          criticalIssues: 0,
+          nonCriticalIssues: 1
+        },
+        {
+          id: 'insp-8',
+          equipmentId: '2',
+          startedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
+          completedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+          status: 'COMPLETED',
+          technicianName: 'Mike Johnson',
+          criticalIssues: 0,
+          nonCriticalIssues: 2
+        }
+      ]
+      
+      return mockInspections
+    }
   }
 }

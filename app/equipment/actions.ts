@@ -69,10 +69,10 @@ export async function updateEquipment(id: string, data: Partial<{
   serial: string
   location: string
   hoursUsed: number
-  status: string
+  status: 'OPERATIONAL' | 'MAINTENANCE' | 'OUT_OF_SERVICE' | 'IN_INSPECTION'
 }>) {
   if (!process.env.DATABASE_URL) {
-    const updated = mockStorage.equipment.update(id, data)
+    const updated = mockStorage.equipment.update(id, data as any)
     revalidatePath('/')
     revalidatePath(`/equipment/${id}`)
     return updated
@@ -90,7 +90,7 @@ export async function updateEquipment(id: string, data: Partial<{
     return equipment
   } catch (error) {
     console.error('Failed to update equipment:', error)
-    const updated = mockStorage.equipment.update(id, data)
+    const updated = mockStorage.equipment.update(id, data as any)
     revalidatePath('/')
     revalidatePath(`/equipment/${id}`)
     return updated

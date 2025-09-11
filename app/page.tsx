@@ -7,23 +7,40 @@ async function getEquipment() {
   // Check if DATABASE_URL exists
   if (!process.env.DATABASE_URL) {
     console.log('Using mock data - DATABASE_URL not configured')
-    return mockStorage.equipment.getAll()
+    const equipment = mockStorage.equipment.getAll()
+    // Add hasInProgressInspection flag for mock data
+    return equipment.map(eq => ({
+      ...eq,
+      hasInProgressInspection: eq.status === 'IN_INSPECTION'
+    }))
   }
 
   try {
     const { prisma } = await import('@/lib/prisma')
-    return await prisma.equipment.findMany({
+    const equipment = await prisma.equipment.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
         inspections: {
-          orderBy: { startedAt: 'desc' },
+          where: {
+            status: 'IN_PROGRESS'
+          },
           take: 1,
         },
       },
     })
+    
+    // Add a flag to indicate if there's an in-progress inspection
+    return equipment.map(eq => ({
+      ...eq,
+      hasInProgressInspection: eq.inspections.length > 0 && eq.inspections[0].status === 'IN_PROGRESS'
+    }))
   } catch (error) {
     console.error('Database connection failed, using mock data:', error)
-    return mockStorage.equipment.getAll()
+    const equipment = mockStorage.equipment.getAll()
+    return equipment.map(eq => ({
+      ...eq,
+      hasInProgressInspection: eq.status === 'IN_INSPECTION'
+    }))
   }
 }
 
@@ -42,11 +59,18 @@ export default async function HomePage() {
               Select equipment to begin inspection
             </p>
           </div>
-          <Link href="/templates">
-            <button className="btn btn-secondary">
-              ⚙️ Manage Templates
-            </button>
-          </Link>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <Link href="/dashboard">
+              <button className="btn btn-primary">
+                📊 Dashboard
+              </button>
+            </Link>
+            <Link href="/templates">
+              <button className="btn btn-secondary">
+                ⚙️ Templates
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
       
@@ -81,7 +105,12 @@ export default async function HomePage() {
                   <span className="equipment-icon">⏱️</span>
                   <span>{item.hoursUsed} hours</span>
                 </div>
-                {item.inspections[0] && (
+                {item.hasInProgressInspection ? (
+                  <div className="equipment-detail-item" style={{ color: '#F59E0B' }}>
+                    <span className="equipment-icon">⚠️</span>
+                    <span style={{ fontWeight: '600' }}>Inspection in progress</span>
+                  </div>
+                ) : item.inspections && item.inspections[0] && item.inspections[0].status !== 'IN_PROGRESS' && (
                   <div className="equipment-detail-item">
                     <span className="equipment-icon">✓</span>
                     <span>Last: {new Date(item.inspections[0].startedAt).toLocaleDateString()}</span>
@@ -90,11 +119,19 @@ export default async function HomePage() {
               </div>
             </div>
             
-            <Link href={`/inspect/${item.id}/select-template`} style={{ textDecoration: 'none' }}>
-              <button className="btn btn-primary" style={{ width: '100%' }}>
-                Start Inspection
-              </button>
-            </Link>
+            {item.hasInProgressInspection ? (
+              <Link href={`/inspect/${item.id}`} style={{ textDecoration: 'none' }}>
+                <button className="btn btn-warning" style={{ width: '100%' }}>
+                  Resume Inspection
+                </button>
+              </Link>
+            ) : (
+              <Link href={`/inspect/${item.id}/select-template`} style={{ textDecoration: 'none' }}>
+                <button className="btn btn-primary" style={{ width: '100%' }}>
+                  Start Inspection
+                </button>
+              </Link>
+            )}
           </div>
         ))}
         

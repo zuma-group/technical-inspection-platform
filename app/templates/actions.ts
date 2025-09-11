@@ -10,7 +10,7 @@ export async function getTemplates() {
 
   try {
     const { prisma } = await import('@/lib/prisma')
-    return await prisma.inspectionTemplate.findMany({
+    const templates = await prisma.inspectionTemplate.findMany({
       include: {
         sections: {
           orderBy: { order: 'asc' },
@@ -23,6 +23,8 @@ export async function getTemplates() {
       },
       orderBy: { createdAt: 'desc' }
     })
+    
+    return templates
   } catch (error) {
     console.error('Failed to fetch templates:', error)
     return mockStorage.templates.getAll()
@@ -74,19 +76,45 @@ export async function createTemplate(data: {
 }) {
   if (!process.env.DATABASE_URL) {
     console.log('Mock mode: Creating template', data)
-    const newTemplate = mockStorage.templates.create(data)
+    // Transform sections to match MockTemplate structure
+    const sectionsWithIds = data.sections.map((section, idx) => ({
+      id: `sec-temp-${Date.now()}-${idx}`,
+      name: section.name,
+      code: section.code,
+      order: section.order,
+      templateId: undefined,
+      checkpoints: section.checkpoints.map((cp, cpIdx) => ({
+        id: `cp-temp-${Date.now()}-${idx}-${cpIdx}`,
+        code: cp.code,
+        name: cp.name,
+        critical: cp.critical,
+        order: cp.order,
+        sectionId: undefined
+      }))
+    }))
+    
+    const newTemplate = mockStorage.templates.create({
+      name: data.name,
+      description: data.description,
+      equipmentType: data.equipmentType,
+      parentTemplateId: data.parentTemplateId,
+      isDefault: false,
+      sections: sectionsWithIds
+    })
     revalidatePath('/templates')
     return newTemplate
   }
 
   try {
     const { prisma } = await import('@/lib/prisma')
+    
+    // Now that parentTemplateId is in the schema, we can use it directly
     const template = await prisma.inspectionTemplate.create({
       data: {
         name: data.name,
         description: data.description,
         equipmentType: data.equipmentType,
-        parentTemplateId: data.parentTemplateId,
+        parentTemplateId: data.parentTemplateId || null,
         sections: {
           create: data.sections.map(section => ({
             name: section.name,
@@ -99,6 +127,8 @@ export async function createTemplate(data: {
         }
       }
     })
+    
+    console.log('Template created successfully:', template.id, 'Parent:', template.parentTemplateId)
     revalidatePath('/templates')
     return template
   } catch (error) {

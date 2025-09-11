@@ -185,6 +185,9 @@ export default function NewEquipmentPage() {
           </button>
         </div>
       </form>
+      
+      {/* Add spacing at the bottom */}
+      <div style={{ height: '60px' }}></div>
     </div>
   )
 }
