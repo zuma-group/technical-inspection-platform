@@ -118,7 +118,7 @@ jobs:
             if ! git status >/dev/null 2>&1; then
               echo "🧹 Removing corrupted directory..."
               cd /home/ubuntu
-              rm -rf technical-inspection-platform-prod
+              rm -rf technical-inspection-platform
             fi
           fi
           
