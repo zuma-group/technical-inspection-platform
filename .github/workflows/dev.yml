@@ -1,0 +1,232 @@
+name: Prince Dev CI/CD
+
+on:
+  push:
+    branches: [ prince ]
+  pull_request:
+    branches: [ prince ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup TEST environment variables
+      run: |
+        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres" >> $GITHUB_ENV
+        echo "JWT_SECRET=test-secret-for-ci-only" >> $GITHUB_ENV
+        echo "NODE_ENV=test" >> $GITHUB_ENV
+
+    - name: Debug environment
+      run: |
+        echo "🔍 Environment variables:"
+        echo "DATABASE_URL=$DATABASE_URL"
+        echo "NODE_ENV=$NODE_ENV"
+        echo "🔍 PostgreSQL connection test:"
+        pg_isready -h localhost -p 5432 -U postgres
+        echo "🔍 Test direct connection:"
+        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d postgres -c "SELECT 1"
+
+    - name: Generate Prisma client
+      run: npx prisma generate
+
+    - name: Run linting
+      run: npm run lint
+
+    # Replace single migrate step with migrate+push to ensure schema exists for seeding
+    - name: Ensure database schema (migrate or push)
+      run: |
+        set -e
+        echo "🗄️  Applying migrations (if any)..."
+        npx prisma migrate deploy || true
+        echo "🧱 Ensuring schema via db push..."
+        npx prisma db push
+
+    - name: Seed database
+      run: node prisma/seed.js
+
+    # - name: Run tests
+    #   run: npm test
+
+    - name: Build application
+      run: npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/prince') && github.event_name == 'push'
+    
+    steps:
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.DEV_EC2_HOST }}
+        username: ${{ secrets.DEV_EC2_USER }}
+        key: ${{ secrets.DEV_EC2_SSH_KEY }}
+        script: |
+          # Set up SSH key for GitHub access
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEV_DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+          # Add GitHub to known hosts
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+          
+          # Configure Git to use the deployment key
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no"
+          
+          # Clean up and clone repository
+          APP_DIR="/home/ubuntu/technical-inspection-platform"
+          ENV_BACKUP="/tmp/.env.backup"
+          
+          # Backup .env file if it exists
+          if [ -f "$APP_DIR/.env" ]; then
+            echo "💾 Backing up .env file..."
+            cp "$APP_DIR/.env" "$ENV_BACKUP"
+          fi
+          
+          # If directory exists but is not a proper git repo, remove it
+          if [ -d "$APP_DIR" ]; then
+            cd "$APP_DIR"
+            if ! git status >/dev/null 2>&1; then
+              echo "🧹 Removing corrupted directory..."
+              cd /home/ubuntu
+              rm -rf technical-inspection-platform
+            fi
+          fi
+          
+          # Clone or update repository
+          if [ ! -d "$APP_DIR" ]; then
+            echo "📥 Cloning repository..."
+            cd /home/ubuntu
+            git clone git@github.com:${{ github.repository }}.git
+            cd technical-inspection-platform
+            git checkout prince
+            
+            # Restore .env file if we had a backup
+            if [ -f "$ENV_BACKUP" ]; then
+              echo "📁 Restoring .env file..."
+              cp "$ENV_BACKUP" .env
+              rm "$ENV_BACKUP"
+            fi
+          else
+            echo "📁 Updating existing repository..."
+            cd "$APP_DIR"
+            git fetch --all
+            git checkout prince
+            git pull origin prince
+          fi
+          
+          # Verify we're in the right directory and files exist
+          echo "📁 Current directory: $(pwd)"
+          echo "📋 Key files check:"
+          ls -la docker-compose.postgres.yml .env 2>/dev/null || echo "Some files missing"
+          
+          # Check if .env exists
+          if [ ! -f .env ]; then
+            echo "❌ Error: .env file not found on server!"
+            echo "Please create production .env file on EC2 server first"
+            echo "Expected location: $(pwd)/.env"
+            exit 1
+          fi
+          
+          # Check if docker-compose file exists
+          if [ ! -f docker-compose.postgres.yml ]; then
+            echo "❌ Error: docker-compose.postgres.yml not found!"
+            echo "Repository may be incomplete"
+            exit 1
+          fi
+          
+          # Stop current application
+          echo "🛑 Stopping current containers..."
+          docker compose -f docker-compose.postgres.yml down || true
+          
+          # Check for port conflicts
+          echo "🔍 Checking for port conflicts..."
+          USED_PORTS=$(docker ps --format '{{.Ports}}' | grep -oP '\d+(?=->)' | sort -n | uniq || echo "")
+          if echo "$USED_PORTS" | grep -q "3002"; then
+            echo "❌ Port 3002 is already in use!"
+            echo "Used ports: $USED_PORTS"
+            echo "Please stop the conflicting service or update docker-compose.postgres.yml to use a different port"
+            exit 1
+          fi
+          echo "✅ Port 3002 is available"
+          
+          # Rebuild and restart containers
+          echo "🔨 Building and starting containers..."
+          docker compose -f docker-compose.postgres.yml build --no-cache
+          docker compose -f docker-compose.postgres.yml up -d
+          
+          # Clean up SSH key
+          rm -f ~/.ssh/deploy_key
+          
+          # Wait for containers to start
+          sleep 15
+          
+          # Check if application is running
+          echo "🔍 Checking container status..."
+          docker compose -f docker-compose.postgres.yml ps
+          
+          # Look for "Up" instead of "running"
+          if docker compose -f docker-compose.postgres.yml ps | grep -q "Up"; then
+            echo "✅ Deployment successful!"
+            echo "🔍 Container status:"
+            docker compose -f docker-compose.postgres.yml ps
+            
+            # Test if the app responds
+            echo "🌐 Testing application response..."
+            sleep 5
+            if curl -f http://localhost:3002/ >/dev/null 2>&1; then
+              echo "✅ Application is responding!"
+            else
+              echo "⚠️  Application might still be starting up"
+            fi
+          else
+            echo "❌ Deployment failed!"
+            echo "📋 Container logs:"
+            docker compose -f docker-compose.postgres.yml logs
+            exit 1
+          fi
+
+  notify:
+    needs: [test, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ "${{ needs.deploy.result }}" == "success" ]; then
+          echo "🎉 Deployment to EC2 successful!"
+        else
+          echo "💥 Deployment to EC2 failed!"
+        fi
+

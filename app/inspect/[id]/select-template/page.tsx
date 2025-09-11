@@ -31,7 +31,7 @@ export default async function SelectTemplatePage({
         <div className="page-header">
           <h1 className="page-title">Equipment Not Found</h1>
           <p className="page-subtitle">
-            The equipment you're looking for doesn't exist.
+            The equipment you&apos;re looking for doesn&apos;t exist.
           </p>
           <Link href="/">
             <button className="btn btn-primary" style={{ marginTop: '20px' }}>

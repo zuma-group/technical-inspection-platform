@@ -11,7 +11,19 @@ export default function EditTemplatePage({ params }: { params: Promise<{ id: str
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [equipmentType, setEquipmentType] = useState('')
-  const [sections, setSections] = useState<any[]>([])
+  const [sections, setSections] = useState<Array<{
+    id: string;
+    name: string;
+    code: string;
+    order: number;
+    checkpoints: Array<{
+      id: string;
+      code: string;
+      name: string;
+      critical: boolean;
+      order: number;
+    }>;
+  }>>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -31,12 +43,14 @@ export default function EditTemplatePage({ params }: { params: Promise<{ id: str
   }, [params])
 
   const handleAddSection = async () => {
-    const newSection = await addSection(templateId, {
+    const result = await addSection(templateId, {
       name: 'New Section',
       code: 'NS',
       order: sections.length + 1
     })
-    setSections([...sections, { ...newSection, checkpoints: [] }])
+    if (result.success && result.data) {
+      setSections([...sections, { ...result.data, checkpoints: [] }])
+    }
   }
 
   const handleDeleteSection = async (sectionId: string) => {
@@ -46,7 +60,7 @@ export default function EditTemplatePage({ params }: { params: Promise<{ id: str
     }
   }
 
-  const handleUpdateSection = async (sectionId: string, field: string, value: string) => {
+  const handleUpdateSection = async (sectionId: string, field: string, value: string | number) => {
     await updateSection(sectionId, { [field]: value })
     setSections(sections.map(s => 
       s.id === sectionId ? { ...s, [field]: value } : s
@@ -55,29 +69,33 @@ export default function EditTemplatePage({ params }: { params: Promise<{ id: str
 
   const handleAddCheckpoint = async (sectionId: string) => {
     const section = sections.find(s => s.id === sectionId)
-    const newCheckpoint = await addCheckpoint(sectionId, {
+    if (!section) return
+    
+    const result = await addCheckpoint(sectionId, {
       code: `${section.code}-${(section.checkpoints.length + 1).toString().padStart(2, '0')}`,
       name: 'New Checkpoint',
       critical: false,
       order: section.checkpoints.length + 1
     })
-    setSections(sections.map(s => 
-      s.id === sectionId 
-        ? { ...s, checkpoints: [...s.checkpoints, newCheckpoint] }
-        : s
-    ))
+    if (result.success && result.data) {
+      setSections(sections.map(s => 
+        s.id === sectionId 
+          ? { ...s, checkpoints: [...s.checkpoints, result.data] }
+          : s
+      ))
+    }
   }
 
   const handleDeleteCheckpoint = async (sectionId: string, checkpointId: string) => {
     await deleteCheckpoint(checkpointId)
     setSections(sections.map(s => 
       s.id === sectionId 
-        ? { ...s, checkpoints: s.checkpoints.filter((cp: any) => cp.id !== checkpointId) }
+        ? { ...s, checkpoints: s.checkpoints.filter((cp: { id: string }) => cp.id !== checkpointId) }
         : s
     ))
   }
 
-  const handleUpdateCheckpoint = async (sectionId: string, checkpointId: string, field: string, value: any) => {
+  const handleUpdateCheckpoint = async (sectionId: string, checkpointId: string, field: string, value: string | boolean | number) => {
     await updateCheckpoint(checkpointId, { [field]: value })
     setSections(sections.map(s => 
       s.id === sectionId 

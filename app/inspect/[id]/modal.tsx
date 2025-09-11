@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import Image from 'next/image'
 
 interface ModalProps {
   isOpen: boolean
@@ -33,7 +34,7 @@ export default function CheckpointModal({
 
   if (!isOpen) return null
 
-  const handleMediaCapture = (files: FileList | null, type: 'photo' | 'video') => {
+  const handleMediaCapture = (files: FileList | null, _type: 'photo' | 'video') => {
     if (!files || files.length === 0) return
     
     const file = files[0]
@@ -163,10 +164,12 @@ export default function CheckpointModal({
                       style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
                     />
                   ) : (
-                    <img
+                    <Image
                       src={preview}
                       alt="Preview"
-                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
+                      width={80}
+                      height={80}
+                      style={{ objectFit: 'cover', borderRadius: '8px' }}
                     />
                   )}
                   <button

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { updateCheckpoint, completeInspection, stopInspection } from './actions'
 import CheckpointModal from './modal'
 
@@ -32,7 +33,7 @@ export default function InspectionClient({ inspection }) {
 
   const section = inspection.sections[currentSection]
   const totalCheckpoints = inspection.sections.reduce((sum, s) => sum + s.checkpoints.length, 0)
-  const completedCheckpoints = Object.values(checkpoints).filter((cp: any) => cp.status).length
+  const completedCheckpoints = Object.values(checkpoints).filter((cp: { status: string | null }) => cp.status).length
   const progress = (completedCheckpoints / totalCheckpoints) * 100
 
   const handleCheckpoint = (checkpointId: string, checkpointName: string, status: string) => {
@@ -279,7 +280,7 @@ export default function InspectionClient({ inspection }) {
                       gap: '8px',
                       overflowX: 'auto'
                     }}>
-                      {cpData.media.map((m: any) => (
+                      {cpData.media.map((m: { id: string; type: string }) => (
                         <a 
                           key={m.id} 
                           href={`/api/media/${m.id}`} 
@@ -302,12 +303,12 @@ export default function InspectionClient({ inspection }) {
                               📹
                             </div>
                           ) : (
-                            <img
+                            <Image
                               src={`/api/media/${m.id}`}
                               alt="Inspection media"
+                              width={60}
+                              height={60}
                               style={{
-                                width: '60px',
-                                height: '60px',
                                 objectFit: 'cover',
                                 borderRadius: '8px',
                                 border: '2px solid #E5E7EB'
