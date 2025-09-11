@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const source = searchParams.get('source')
+    const _source = searchParams.get('source')
 
     // Get total equipment count
     const totalEquipment = await prisma.equipment.count()

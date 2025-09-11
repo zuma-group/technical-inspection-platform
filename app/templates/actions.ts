@@ -118,7 +118,7 @@ export async function updateTemplate(
   }
 ) {
   try {
-    const updateData: any = {}
+    const updateData: Record<string, any> = {}
     
     if (data.name !== undefined) updateData.name = data.name
     if (data.description !== undefined) updateData.description = data.description
