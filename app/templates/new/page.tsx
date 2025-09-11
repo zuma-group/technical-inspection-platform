@@ -86,7 +86,7 @@ export default function NewTemplatePage() {
         }])
       }
     }
-  }, [parentTemplateId, availableTemplates, sections])
+  }, [parentTemplateId, availableTemplates])
 
   const addSection = () => {
     setSections([...sections, {
