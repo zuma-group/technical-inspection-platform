@@ -77,3 +77,50 @@ DATABASE_URL="postgresql://postgres:password@localhost:5432/inspection_db?schema
 - [ ] Application has been redeployed after adding environment variables
 - [ ] Database schema has been initialized
 - [ ] Test data has been seeded (optional)
+
+---
+
+## EC2/Docker Deployment (Dev)
+
+### Environment variables (.env on server)
+Create `/home/ubuntu/technical-inspection-platform/.env` with at least:
+
+```
+# Database (RDS connection)
+DATABASE_URL=postgresql://username:password@your-rds-endpoint:5432/database_name
+
+# Node/Next
+NODE_ENV=production
+PORT=3002
+```
+
+Note: Replace the DATABASE_URL with your actual RDS PostgreSQL connection string.
+
+### One-time server setup
+- Install Docker and Docker Compose plugin
+- Ensure an SSH deploy key with read access to this repo is stored as the `DEV_DEPLOY_SSH_KEY` GitHub secret
+- Ensure `.env` exists before the first deploy
+
+### Local test (optional)
+```
+docker compose -f docker-compose.postgres.yml up -d --build
+```
+App will be available at http://localhost:3002
+
+### CI/CD workflow
+The workflow at `.github/workflows/dev.yml` will:
+- Run linting, migrations, seeding, and build
+- SSH into EC2, clone/update the repo at `/home/ubuntu/technical-inspection-platform`
+- Check for port conflicts before deployment
+- Use `docker-compose.postgres.yml` to build and run the app with your RDS database
+
+#### Required GitHub Secrets
+- `DEV_EC2_HOST`: EC2 public IP/DNS
+- `DEV_EC2_USER`: SSH username (e.g., `ubuntu`)
+- `DEV_EC2_SSH_KEY`: Private key for EC2 SSH user
+- `DEV_DEPLOY_SSH_KEY`: Private key with read access to this Git repo
+
+### Notes
+- The container entrypoint runs `prisma migrate deploy` on startup to apply migrations.
+- Seeds are executed in CI; adjust if you need runtime seeding.
+- Port conflict detection prevents deployment if port 3002 is already in use.

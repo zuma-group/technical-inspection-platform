@@ -198,11 +198,6 @@
 ```env
 # Database
 DATABASE_URL=
-DATABASE_DIRECT_URL=
-
-# Authentication
-NEXTAUTH_URL=
-NEXTAUTH_SECRET=
 
 # Optional: Monitoring
 SENTRY_DSN=

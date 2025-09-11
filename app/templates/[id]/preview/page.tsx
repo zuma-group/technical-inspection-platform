@@ -57,7 +57,7 @@ export default async function PreviewTemplatePage({
       </div>
 
       <div style={{ marginBottom: '24px' }}>
-        {template.sections.map((section, sectionIndex) => (
+        {template.sections.map((section, _sectionIndex) => (
           <div key={section.id} className="card" style={{ marginBottom: '20px' }}>
             <div style={{ 
               display: 'flex', 
@@ -86,7 +86,7 @@ export default async function PreviewTemplatePage({
             </div>
 
             <div style={{ display: 'grid', gap: '8px' }}>
-              {section.checkpoints.map((checkpoint, cpIndex) => (
+              {section.checkpoints.map((checkpoint, _cpIndex) => (
                 <div 
                   key={checkpoint.id}
                   style={{ 

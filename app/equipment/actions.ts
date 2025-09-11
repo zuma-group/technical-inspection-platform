@@ -65,7 +65,7 @@ export async function updateEquipment(id: string, data: Partial<{
   status: string
 }>) {
   try {
-    const updateData: any = {}
+    const updateData: Record<string, any> = {}
     
     // Validate and add fields only if they are provided
     if (data.model !== undefined) updateData.model = data.model

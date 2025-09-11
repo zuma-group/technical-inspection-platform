@@ -12,7 +12,24 @@ export default function NewTemplatePage() {
   const [description, setDescription] = useState('')
   const [equipmentType, setEquipmentType] = useState('BOOM_LIFT')
   const [parentTemplateId, setParentTemplateId] = useState('')
-  const [availableTemplates, setAvailableTemplates] = useState<any[]>([])
+  const [availableTemplates, setAvailableTemplates] = useState<Array<{
+    id: string;
+    name: string;
+    equipmentType: string;
+    sections: Array<{
+      id: string;
+      name: string;
+      code: string;
+      order: number;
+      checkpoints: Array<{
+        id: string;
+        code: string;
+        name: string;
+        critical: boolean;
+        order: number;
+      }>;
+    }>;
+  }>>([])
   const [sections, setSections] = useState([
     {
       id: 'temp-1',
@@ -40,11 +57,11 @@ export default function NewTemplatePage() {
         setEquipmentType(parentTemplate.equipmentType)
         
         // Copy parent sections as inherited
-        const inheritedSections = parentTemplate.sections.map((section: any) => ({
+        const inheritedSections = parentTemplate.sections.map((section) => ({
           ...section,
           id: `inherited-${section.id}`,
           inherited: true,
-          checkpoints: section.checkpoints.map((cp: any) => ({
+          checkpoints: section.checkpoints.map((cp) => ({
             ...cp,
             id: `inherited-${cp.id}`,
             inherited: true
@@ -69,7 +86,7 @@ export default function NewTemplatePage() {
         }])
       }
     }
-  }, [parentTemplateId])
+  }, [parentTemplateId, availableTemplates])
 
   const addSection = () => {
     setSections([...sections, {
@@ -91,7 +108,7 @@ export default function NewTemplatePage() {
     setSections(sections.filter(s => s.id !== id))
   }
 
-  const updateSection = (id: string, field: string, value: string) => {
+  const updateSection = (id: string, field: string, value: string | number) => {
     setSections(sections.map(s => 
       s.id === id ? { ...s, [field]: value } : s
     ))
@@ -125,7 +142,7 @@ export default function NewTemplatePage() {
     ))
   }
 
-  const updateCheckpoint = (sectionId: string, checkpointId: string, field: string, value: any) => {
+  const updateCheckpoint = (sectionId: string, checkpointId: string, field: string, value: string | boolean | number) => {
     setSections(sections.map(s => 
       s.id === sectionId 
         ? {
@@ -299,7 +316,7 @@ export default function NewTemplatePage() {
           </button>
         </div>
 
-        {sections.map((section, sectionIndex) => (
+        {sections.map((section, _sectionIndex) => (
           <div key={section.id} style={{ 
             background: section.inherited ? '#F0F9FF' : '#F9FAFB', 
             borderRadius: '8px', 
@@ -365,7 +382,7 @@ export default function NewTemplatePage() {
             </div>
 
             <div style={{ marginLeft: '20px' }}>
-              {section.checkpoints.map((checkpoint, cpIndex) => (
+              {section.checkpoints.map((checkpoint, _cpIndex) => (
                 <div key={checkpoint.id} style={{ 
                   display: 'flex', 
                   gap: '8px', 
