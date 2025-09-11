@@ -76,7 +76,10 @@ export async function createTemplate(data: {
 }) {
   if (!process.env.DATABASE_URL) {
     console.log('Mock mode: Creating template', data)
-    const newTemplate = mockStorage.templates.create(data)
+    const newTemplate = mockStorage.templates.create({
+      ...data,
+      isDefault: false  // Add the required isDefault field
+    })
     revalidatePath('/templates')
     return newTemplate
   }
