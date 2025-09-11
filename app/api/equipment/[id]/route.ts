@@ -6,11 +6,12 @@ export const dynamic = 'force-dynamic'
 // GET - Fetch single equipment by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const equipment = await prisma.equipment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         inspections: {
           include: {
@@ -57,15 +58,16 @@ export async function GET(
 // PUT - Update equipment
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     const { type, model, serial, location, hoursUsed, status } = body
 
     // Check if equipment exists
     const existingEquipment = await prisma.equipment.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingEquipment) {
@@ -91,7 +93,7 @@ export async function PUT(
 
     // Update equipment
     const updatedEquipment = await prisma.equipment.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(type && { type }),
         ...(model && { model }),
@@ -138,12 +140,13 @@ export async function PUT(
 // DELETE - Delete equipment
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     // Check if equipment exists
     const existingEquipment = await prisma.equipment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         inspections: true
       }
@@ -166,7 +169,7 @@ export async function DELETE(
 
     // Delete equipment
     await prisma.equipment.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({ 
