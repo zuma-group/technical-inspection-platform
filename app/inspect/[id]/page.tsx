@@ -199,10 +199,12 @@ export default async function InspectPage({
   params,
   searchParams
 }: { 
-  params: { id: string }
-  searchParams: { template?: string }
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ template?: string }>
 }) {
-  const inspection = await getOrCreateInspection(params.id, searchParams.template)
+  const { id } = await params
+  const { template } = await searchParams
+  const inspection = await getOrCreateInspection(id, template)
 
   if (!inspection) {
     notFound()
