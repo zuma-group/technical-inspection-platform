@@ -128,7 +128,7 @@ jobs:
             cd /home/ubuntu
             git clone git@github.com:${{ github.repository }}.git technical-inspection-platform
             cd technical-inspection-platform
-            git checkout ${{ github.ref }}
+            git checkout main
             
             # Restore .env file if we had a backup
             if [ -f "$ENV_BACKUP" ]; then
@@ -140,8 +140,8 @@ jobs:
             echo "📁 Updating existing repository..."
             cd "$APP_DIR"
             git fetch --all
-            git checkout ${{ github.ref }}
-            git pull origin ${{ github.ref }}
+            git checkout main
+            git pull origin main
           fi
           
           # Verify we're in the right directory and files exist
