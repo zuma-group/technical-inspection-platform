@@ -164,20 +164,20 @@ jobs:
             exit 1
           fi
           
-          # Check for port conflicts (using port 3000 for production)
+          # Stop current application
+          echo "🛑 Stopping current containers..."
+          docker compose -f docker-compose.postgres.yml down || true
+          
+          # Check for port conflicts (using port 3002 for production)
           echo "🔍 Checking for port conflicts..."
           USED_PORTS=$(docker ps --format '{{.Ports}}' | grep -oP '\d+(?=->)' | sort -n | uniq || echo "")
-          if echo "$USED_PORTS" | grep -q "3000"; then
-            echo "❌ Port 3000 is already in use!"
+          if echo "$USED_PORTS" | grep -q "3002"; then
+            echo "❌ Port 3002 is already in use!"
             echo "Used ports: $USED_PORTS"
             echo "Please stop the conflicting service or update docker-compose.postgres.yml to use a different port"
             exit 1
           fi
-          echo "✅ Port 3000 is available"
-          
-          # Stop current application
-          echo "🛑 Stopping current containers..."
-          docker compose -f docker-compose.postgres.yml down || true
+          echo "✅ Port 3002 is available"
           
           # Rebuild and restart containers
           echo "🔨 Building and starting containers..."
@@ -203,7 +203,7 @@ jobs:
             # Test if the app responds
             echo "🌐 Testing application response..."
             sleep 5
-            if curl -f http://localhost:3000/ >/dev/null 2>&1; then
+            if curl -f http://localhost:3002/ >/dev/null 2>&1; then
               echo "✅ Application is responding!"
             else
               echo "⚠️  Application might still be starting up"
