@@ -2,7 +2,7 @@ name: Main Production CI/CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, prince ]
   pull_request:
     branches: [ main ]
 
@@ -81,7 +81,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main') && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prince') && github.event_name == 'push'
     
     steps:
     - name: Deploy to Production EC2
@@ -128,7 +128,7 @@ jobs:
             cd /home/ubuntu
             git clone git@github.com:${{ github.repository }}.git technical-inspection-platform-prod
             cd technical-inspection-platform-prod
-            git checkout main
+            git checkout ${{ github.ref }}
             
             # Restore .env file if we had a backup
             if [ -f "$ENV_BACKUP" ]; then
@@ -140,7 +140,7 @@ jobs:
             echo "📁 Updating existing repository..."
             cd "$APP_DIR"
             git fetch --all
-            git checkout main
+            git checkout ${{ github.ref }}
             git pull origin main
           fi
           
