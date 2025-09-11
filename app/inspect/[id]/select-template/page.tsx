@@ -1,22 +1,18 @@
 import Link from 'next/link'
 import { getTemplates } from '@/app/templates/actions'
-import { mockEquipment } from '@/lib/mock-data'
+import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 async function getEquipment(id: string) {
-  if (!process.env.DATABASE_URL) {
-    return mockEquipment.find(e => e.id === id)
-  }
-  
   try {
-    const { prisma } = await import('@/lib/prisma')
     return await prisma.equipment.findUnique({
       where: { id }
     })
-  } catch {
-    return mockEquipment.find(e => e.id === id)
+  } catch (error) {
+    console.error('Failed to fetch equipment:', error)
+    return null
   }
 }
 
@@ -29,28 +25,44 @@ export default async function SelectTemplatePage({
   const equipment = await getEquipment(id)
   const allTemplates = await getTemplates()
   
-  console.log('Equipment:', equipment?.type, equipment?.model)
-  console.log('All templates:', allTemplates.length, allTemplates.map(t => ({ 
-    id: t.id, 
-    name: t.name, 
-    type: t.equipmentType 
-  })))
+  if (!equipment) {
+    return (
+      <div className="container">
+        <div className="page-header">
+          <h1 className="page-title">Equipment Not Found</h1>
+          <p className="page-subtitle">
+            The equipment you're looking for doesn't exist.
+          </p>
+          <Link href="/">
+            <button className="btn btn-primary" style={{ marginTop: '20px' }}>
+              Back to Equipment
+            </button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
   
   // Show all templates, but sort relevant ones first
   const relevantTemplates = allTemplates.sort((a, b) => {
     // If equipment type matches, prioritize it
-    if (equipment) {
-      const aMatches = a.equipmentType === equipment.type
-      const bMatches = b.equipmentType === equipment.type
-      if (aMatches && !bMatches) return -1
-      if (!aMatches && bMatches) return 1
-    }
+    const aMatches = a.equipmentType === equipment.type
+    const bMatches = b.equipmentType === equipment.type
+    if (aMatches && !bMatches) return -1
+    if (!aMatches && bMatches) return 1
+    
     // Then sort by default status
     if (a.isDefault && !b.isDefault) return -1
     if (!a.isDefault && b.isDefault) return 1
+    
     // Finally sort by name
     return a.name.localeCompare(b.name)
   })
+
+  // Find default template for this equipment type
+  const defaultTemplate = relevantTemplates.find(t => 
+    t.equipmentType === equipment.type && t.isDefault
+  )
 
   return (
     <div className="container">
@@ -63,11 +75,9 @@ export default async function SelectTemplatePage({
           </Link>
         </div>
         <h1 className="page-title">Select Inspection Template</h1>
-        {equipment && (
-          <p className="page-subtitle">
-            For {equipment.model} ({equipment.serial})
-          </p>
-        )}
+        <p className="page-subtitle">
+          For {equipment.model} ({equipment.serial})
+        </p>
       </div>
 
       <div className="templates-grid">
@@ -79,26 +89,33 @@ export default async function SelectTemplatePage({
           }}>
             <div style={{ marginBottom: '16px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
-                Standard Inspection
+                Quick Inspection
               </h2>
               <p style={{ fontSize: '14px', color: '#6B7280' }}>
-                Use the default inspection template
+                {defaultTemplate 
+                  ? `Use default ${equipment.type.replace(/_/g, ' ').toLowerCase()} template`
+                  : 'Use basic inspection template'
+                }
               </p>
-              <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '12px' }}>
-                <span>5 sections</span>
-                <span style={{ margin: '0 8px' }}>•</span>
-                <span>25 checkpoints</span>
-              </div>
+              {defaultTemplate && (
+                <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '12px' }}>
+                  <span>{defaultTemplate.sections.length} sections</span>
+                  <span style={{ margin: '0 8px' }}>•</span>
+                  <span>
+                    {defaultTemplate.sections.reduce((acc, section) => acc + section.checkpoints.length, 0)} checkpoints
+                  </span>
+                </div>
+              )}
             </div>
             <button className="btn btn-primary" style={{ width: '100%' }}>
-              Use Default
+              Start Inspection
             </button>
           </div>
         </Link>
 
         {/* Custom Templates */}
         {relevantTemplates.map(template => {
-          const isRecommended = equipment && template.equipmentType === equipment.type
+          const isRecommended = template.equipmentType === equipment.type
           return (
             <Link 
               key={template.id} 
@@ -177,7 +194,7 @@ export default async function SelectTemplatePage({
         <div style={{ textAlign: 'center', marginTop: '24px', paddingBottom: '24px' }}>
           <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '12px' }}>
             Showing {allTemplates.length} template{allTemplates.length !== 1 ? 's' : ''}
-            {equipment && ` for inspection of ${equipment.model}`}
+            {` for inspection of ${equipment.model}`}
           </p>
           <Link href="/templates/new">
             <button className="btn btn-secondary">

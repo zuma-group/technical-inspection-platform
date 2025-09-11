@@ -24,13 +24,21 @@ npm run start                # Start production server
 
 ## Architecture
 
+### Tech Stack
+- **Next.js 15** with App Router (Server Components by default)
+- **TypeScript** with strict type checking
+- **PostgreSQL + Prisma ORM** for data persistence
+- **Pure CSS** (no Tailwind) for performance
+- **Server Actions** instead of API routes for forms
+
 ### Core Design Principles
 - **Performance First**: Pure CSS over Tailwind, minimal dependencies, server-side rendering
 - **Mobile-First**: Large touch targets (48px min), one-finger operation, direct camera access
 - **Simple & Direct**: No abstractions, minimal client JavaScript, server actions for instant UI
+- **Resilient**: Mock data fallback when database unavailable (`lib/mock-storage.ts`)
 
 ### Data Flow
-1. **Equipment List** (`app/page.tsx`): Server-rendered list with direct Prisma queries
+1. **Equipment List** (`app/page.tsx`): Server-rendered list with direct Prisma queries or mock fallback
 2. **Inspection Creation** (`app/inspect/[id]/page.tsx`): Auto-creates inspection if none in progress
 3. **Checkpoint Updates** (`app/inspect/[id]/client.tsx`): 
    - Pass: Instant update via server action
@@ -38,6 +46,11 @@ npm run start                # Start production server
 4. **Media Upload** (`app/api/upload/route.ts`): Saves to `public/uploads/` and links to checkpoint
 
 ### Key Implementation Details
+
+**Template System**:
+- `InspectionTemplate` model allows customizable inspection checklists per equipment type
+- Templates define sections and checkpoints with criticality levels
+- Default templates auto-created if none exist
 
 **Modal System for Corrected/Action Required**:
 - Captures photos/videos directly from device camera using HTML5 `capture` attribute
@@ -47,8 +60,8 @@ npm run start                # Start production server
 **Database Relations**:
 ```
 Equipment → Inspections → Sections → Checkpoints → Media
-                ↓
-              User (Technician)
+    ↓            ↓
+Templates      User (Technician)
 ```
 
 **Equipment Status Logic** (on inspection completion):
@@ -60,33 +73,37 @@ Equipment → Inspections → Sections → Checkpoints → Media
 - Server-side rendering for instant page loads
 - Optimistic UI updates with `useTransition`
 - No build-time CSS processing (no Tailwind)
-- Direct database queries without ORMs layers
+- Direct database queries without ORM abstraction layers
 - Minimal client-side JavaScript
+- `force-dynamic` routing for fresh data on inspection pages
 
-## Database Connection
+## Database Setup
 
 PostgreSQL connection via `.env`:
 ```
 DATABASE_URL="postgresql://postgres:password@localhost:5432/team_inspection_tool?schema=public"
+DATABASE_DIRECT_URL="postgresql://postgres:password@localhost:5432/team_inspection_tool?schema=public"
 ```
 
-## File Structure
-
+**Initial Setup**:
+```bash
+npm run db:push    # Create/update schema
+npm run db:seed    # Add test equipment and templates
 ```
-app/
-├── page.tsx                 # Equipment list (server component)
-├── inspect/[id]/
-│   ├── page.tsx            # Inspection setup (server)
-│   ├── client.tsx          # Inspection UI (client)
-│   ├── modal.tsx           # Checkpoint modal
-│   └── actions.ts          # Server actions
-├── api/upload/             # Media upload endpoint
-└── globals.css             # Pure CSS (no Tailwind)
 
-prisma/
-├── schema.prisma           # Database schema
-└── seed.js                 # Test data
+## Important Patterns
 
-lib/prisma.ts              # Prisma client singleton
-public/uploads/            # Uploaded media files
-```
+### Server Components vs Client Components
+- Default to Server Components (no 'use client')
+- Only use Client Components for interactivity (modals, forms with state)
+- Server Actions handle all form submissions
+
+### Error Handling
+- Database operations wrapped in try-catch with mock data fallback
+- User-friendly error messages in UI
+- Console logging for debugging in development
+
+### Media Storage
+- Files stored directly in `public/uploads/`
+- No cloud storage dependencies
+- Direct URL access for instant loading

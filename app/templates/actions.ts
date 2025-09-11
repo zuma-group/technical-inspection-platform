@@ -1,15 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { mockStorage } from '@/lib/mock-storage'
+import { prisma } from '@/lib/prisma'
+import { EquipmentType } from '@prisma/client'
 
 export async function getTemplates() {
-  if (!process.env.DATABASE_URL) {
-    return mockStorage.templates.getAll()
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
     const templates = await prisma.inspectionTemplate.findMany({
       include: {
         sections: {
@@ -27,17 +23,12 @@ export async function getTemplates() {
     return templates
   } catch (error) {
     console.error('Failed to fetch templates:', error)
-    return mockStorage.templates.getAll()
+    return []
   }
 }
 
 export async function getTemplate(id: string) {
-  if (!process.env.DATABASE_URL) {
-    return mockStorage.templates.getById(id) || null
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
     return await prisma.inspectionTemplate.findUnique({
       where: { id },
       include: {
@@ -53,7 +44,7 @@ export async function getTemplate(id: string) {
     })
   } catch (error) {
     console.error('Failed to fetch template:', error)
-    return mockStorage.templates.getById(id) || null
+    return null
   }
 }
 
@@ -74,46 +65,18 @@ export async function createTemplate(data: {
     }>
   }>
 }) {
-  if (!process.env.DATABASE_URL) {
-    console.log('Mock mode: Creating template', data)
-    // Transform sections to match MockTemplate structure
-    const sectionsWithIds = data.sections.map((section, idx) => ({
-      id: `sec-temp-${Date.now()}-${idx}`,
-      name: section.name,
-      code: section.code,
-      order: section.order,
-      templateId: undefined,
-      checkpoints: section.checkpoints.map((cp, cpIdx) => ({
-        id: `cp-temp-${Date.now()}-${idx}-${cpIdx}`,
-        code: cp.code,
-        name: cp.name,
-        critical: cp.critical,
-        order: cp.order,
-        sectionId: undefined
-      }))
-    }))
-    
-    const newTemplate = mockStorage.templates.create({
-      name: data.name,
-      description: data.description,
-      equipmentType: data.equipmentType,
-      parentTemplateId: data.parentTemplateId,
-      isDefault: false,
-      sections: sectionsWithIds
-    })
-    revalidatePath('/templates')
-    return newTemplate
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
-    
-    // Now that parentTemplateId is in the schema, we can use it directly
+    // Validate equipment type
+    const equipmentType = data.equipmentType.toUpperCase().replace(' ', '_') as EquipmentType
+    if (!Object.values(EquipmentType).includes(equipmentType)) {
+      throw new Error(`Invalid equipment type: ${data.equipmentType}`)
+    }
+
     const template = await prisma.inspectionTemplate.create({
       data: {
         name: data.name,
         description: data.description,
-        equipmentType: data.equipmentType,
+        equipmentType,
         parentTemplateId: data.parentTemplateId || null,
         sections: {
           create: data.sections.map(section => ({
@@ -125,15 +88,24 @@ export async function createTemplate(data: {
             }
           }))
         }
+      },
+      include: {
+        sections: {
+          include: {
+            checkpoints: true
+          }
+        }
       }
     })
     
-    console.log('Template created successfully:', template.id, 'Parent:', template.parentTemplateId)
     revalidatePath('/templates')
-    return template
+    return { success: true, data: template }
   } catch (error) {
     console.error('Failed to create template:', error)
-    throw error
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to create template' 
+    }
   }
 }
 
@@ -145,76 +117,81 @@ export async function updateTemplate(
     equipmentType?: string
   }
 ) {
-  if (!process.env.DATABASE_URL) {
-    console.log('Mock mode: Updating template', { id, data })
-    mockStorage.templates.update(id, data)
-    revalidatePath('/templates')
-    revalidatePath(`/templates/${id}/edit`)
-    return
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
-    await prisma.inspectionTemplate.update({
+    const updateData: any = {}
+    
+    if (data.name !== undefined) updateData.name = data.name
+    if (data.description !== undefined) updateData.description = data.description
+    
+    if (data.equipmentType !== undefined) {
+      const equipmentType = data.equipmentType.toUpperCase().replace(' ', '_') as EquipmentType
+      if (!Object.values(EquipmentType).includes(equipmentType)) {
+        throw new Error(`Invalid equipment type: ${data.equipmentType}`)
+      }
+      updateData.equipmentType = equipmentType
+    }
+
+    const template = await prisma.inspectionTemplate.update({
       where: { id },
-      data
+      data: updateData
     })
+    
     revalidatePath('/templates')
-    revalidatePath(`/templates/${id}/edit`)
+    revalidatePath(`/templates/${id}`)
+    return { success: true, data: template }
   } catch (error) {
     console.error('Failed to update template:', error)
-    throw error
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to update template' 
+    }
   }
 }
 
 export async function deleteTemplate(id: string) {
-  if (!process.env.DATABASE_URL) {
-    console.log('Mock mode: Deleting template', { id })
-    mockStorage.templates.delete(id)
-    revalidatePath('/templates')
-    return
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
     await prisma.inspectionTemplate.delete({
       where: { id }
     })
+    
     revalidatePath('/templates')
+    return { success: true }
   } catch (error) {
     console.error('Failed to delete template:', error)
-    throw error
+    return { 
+      success: false, 
+      error: 'Failed to delete template. It may be in use.' 
+    }
   }
 }
 
+// Section management
 export async function addSection(
   templateId: string,
-  section: {
+  data: {
     name: string
     code: string
     order: number
   }
 ) {
-  if (!process.env.DATABASE_URL) {
-    console.log('Mock mode: Adding section', { templateId, section })
-    const newSection = mockStorage.templates.addSection(templateId, section)
-    revalidatePath(`/templates/${templateId}/edit`)
-    return newSection || { id: 'mock-section' }
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
-    const newSection = await prisma.templateSection.create({
+    const section = await prisma.templateSection.create({
       data: {
         templateId,
-        ...section
+        name: data.name,
+        code: data.code,
+        order: data.order
       }
     })
-    revalidatePath(`/templates/${templateId}/edit`)
-    return newSection
+    
+    revalidatePath(`/templates/${templateId}`)
+    return { success: true, data: section }
   } catch (error) {
     console.error('Failed to add section:', error)
-    throw error
+    return { 
+      success: false, 
+      error: 'Failed to add section' 
+    }
   }
 }
 
@@ -226,75 +203,78 @@ export async function updateSection(
     order?: number
   }
 ) {
-  if (!process.env.DATABASE_URL) {
-    console.log('Mock mode: Updating section', { sectionId, data })
-    mockStorage.templates.updateSection(sectionId, data)
-    revalidatePath('/templates')
-    return
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
-    await prisma.templateSection.update({
+    const section = await prisma.templateSection.update({
       where: { id: sectionId },
       data
     })
+    
     revalidatePath('/templates')
+    return { success: true, data: section }
   } catch (error) {
     console.error('Failed to update section:', error)
-    throw error
+    return { 
+      success: false, 
+      error: 'Failed to update section' 
+    }
   }
 }
 
 export async function deleteSection(sectionId: string) {
-  if (!process.env.DATABASE_URL) {
-    console.log('Mock mode: Deleting section', { sectionId })
-    mockStorage.templates.deleteSection(sectionId)
-    revalidatePath('/templates')
-    return
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
+    // Get the template ID before deleting
+    const section = await prisma.templateSection.findUnique({
+      where: { id: sectionId }
+    })
+    
+    if (!section) {
+      return { success: false, error: 'Section not found' }
+    }
+    
     await prisma.templateSection.delete({
       where: { id: sectionId }
     })
-    revalidatePath('/templates')
+    
+    revalidatePath(`/templates/${section.templateId}`)
+    return { success: true }
   } catch (error) {
     console.error('Failed to delete section:', error)
-    throw error
+    return { 
+      success: false, 
+      error: 'Failed to delete section' 
+    }
   }
 }
 
+// Checkpoint management
 export async function addCheckpoint(
   sectionId: string,
-  checkpoint: {
+  data: {
     code: string
     name: string
     critical: boolean
     order: number
   }
 ) {
-  if (!process.env.DATABASE_URL) {
-    console.log('Mock mode: Adding checkpoint', { sectionId, checkpoint })
-    const newCheckpoint = mockStorage.templates.addCheckpoint(sectionId, checkpoint)
-    revalidatePath('/templates')
-    return newCheckpoint || { id: 'mock-checkpoint' }
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
-    const newCheckpoint = await prisma.templateCheckpoint.create({
+    const checkpoint = await prisma.templateCheckpoint.create({
       data: {
         sectionId,
-        ...checkpoint
+        code: data.code,
+        name: data.name,
+        critical: data.critical,
+        order: data.order
       }
     })
+    
     revalidatePath('/templates')
-    return newCheckpoint
+    return { success: true, data: checkpoint }
   } catch (error) {
     console.error('Failed to add checkpoint:', error)
-    throw error
+    return { 
+      success: false, 
+      error: 'Failed to add checkpoint' 
+    }
   }
 }
 
@@ -307,42 +287,36 @@ export async function updateCheckpoint(
     order?: number
   }
 ) {
-  if (!process.env.DATABASE_URL) {
-    console.log('Mock mode: Updating checkpoint', { checkpointId, data })
-    mockStorage.templates.updateCheckpoint(checkpointId, data)
-    revalidatePath('/templates')
-    return
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
-    await prisma.templateCheckpoint.update({
+    const checkpoint = await prisma.templateCheckpoint.update({
       where: { id: checkpointId },
       data
     })
+    
     revalidatePath('/templates')
+    return { success: true, data: checkpoint }
   } catch (error) {
     console.error('Failed to update checkpoint:', error)
-    throw error
+    return { 
+      success: false, 
+      error: 'Failed to update checkpoint' 
+    }
   }
 }
 
 export async function deleteCheckpoint(checkpointId: string) {
-  if (!process.env.DATABASE_URL) {
-    console.log('Mock mode: Deleting checkpoint', { checkpointId })
-    mockStorage.templates.deleteCheckpoint(checkpointId)
-    revalidatePath('/templates')
-    return
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
     await prisma.templateCheckpoint.delete({
       where: { id: checkpointId }
     })
+    
     revalidatePath('/templates')
+    return { success: true }
   } catch (error) {
     console.error('Failed to delete checkpoint:', error)
-    throw error
+    return { 
+      success: false, 
+      error: 'Failed to delete checkpoint' 
+    }
   }
 }

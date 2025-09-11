@@ -282,7 +282,7 @@ export default function InspectionClient({ inspection }) {
                       {cpData.media.map((m: any) => (
                         <a 
                           key={m.id} 
-                          href={m.url} 
+                          href={`/api/media/${m.id}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           style={{ flexShrink: 0 }}
@@ -303,7 +303,7 @@ export default function InspectionClient({ inspection }) {
                             </div>
                           ) : (
                             <img
-                              src={m.url}
+                              src={`/api/media/${m.id}`}
                               alt="Inspection media"
                               style={{
                                 width: '60px',
