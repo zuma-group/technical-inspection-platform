@@ -1,26 +1,11 @@
 'use server'
 
-import { mockStorage } from '@/lib/mock-storage'
+import { prisma } from '@/lib/prisma'
+import { CheckpointStatus } from '@prisma/client'
 
 export async function getDashboardData() {
-  // Check if DATABASE_URL exists
-  if (!process.env.DATABASE_URL) {
-    console.log('Using mock data for dashboard')
-    
-    // Get equipment with inspection history
-    const equipment = mockStorage.equipment.getAll()
-    const inspections = mockStorage.inspections.getAll()
-    
-    return {
-      equipment,
-      inspections
-    }
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
-    
-    // Get all equipment with their latest inspection
+    // Get all equipment with their latest inspection - optimized query
     const equipment = await prisma.equipment.findMany({
       include: {
         inspections: {
@@ -35,7 +20,7 @@ export async function getDashboardData() {
       }
     })
 
-    // Get all inspections with details
+    // Get recent inspections with minimal data needed for dashboard
     const inspections = await prisma.inspection.findMany({
       include: {
         technician: {
@@ -46,8 +31,11 @@ export async function getDashboardData() {
         sections: {
           include: {
             checkpoints: {
+              where: {
+                // Only fetch checkpoints with issues for dashboard metrics
+                status: CheckpointStatus.ACTION_REQUIRED
+              },
               select: {
-                status: true,
                 critical: true
               }
             }
@@ -65,12 +53,10 @@ export async function getDashboardData() {
       
       inspection.sections.forEach(section => {
         section.checkpoints.forEach(checkpoint => {
-          if (checkpoint.status === 'ACTION_REQUIRED') {
-            if (checkpoint.critical) {
-              criticalIssues++
-            } else {
-              nonCriticalIssues++
-            }
+          if (checkpoint.critical) {
+            criticalIssues++
+          } else {
+            nonCriticalIssues++
           }
         })
       })
@@ -88,68 +74,246 @@ export async function getDashboardData() {
     })
 
     return {
+      success: true,
       equipment,
       inspections: processedInspections
     }
   } catch (error) {
-    console.error('Database connection failed, using mock data:', error)
-    
-    const equipment = mockStorage.equipment.getAll()
-    const inspections = mockStorage.inspections.getAll()
-    
+    console.error('Failed to fetch dashboard data:', error)
     return {
-      equipment,
-      inspections
+      success: false,
+      error: 'Failed to fetch dashboard data',
+      equipment: [],
+      inspections: []
     }
   }
 }
 
 export async function getRecentInspections(days: number = 30) {
-  const data = await getDashboardData()
-  
-  const cutoffDate = new Date()
-  cutoffDate.setDate(cutoffDate.getDate() - days)
-  
-  return data.inspections.filter(i => 
-    new Date(i.startedAt) > cutoffDate
-  ).sort((a, b) => 
-    new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-  )
+  try {
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - days)
+    
+    const inspections = await prisma.inspection.findMany({
+      where: {
+        startedAt: {
+          gte: cutoffDate
+        }
+      },
+      include: {
+        equipment: {
+          select: {
+            model: true,
+            serial: true
+          }
+        },
+        technician: {
+          select: {
+            name: true
+          }
+        },
+        sections: {
+          include: {
+            checkpoints: {
+              where: {
+                status: CheckpointStatus.ACTION_REQUIRED
+              },
+              select: {
+                critical: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { startedAt: 'desc' }
+    })
+
+    return {
+      success: true,
+      data: inspections.map(inspection => ({
+        id: inspection.id,
+        equipment: inspection.equipment,
+        startedAt: inspection.startedAt,
+        completedAt: inspection.completedAt,
+        status: inspection.status,
+        technicianName: inspection.technician.name,
+        criticalIssues: inspection.sections.flatMap(s => s.checkpoints).filter(c => c.critical).length,
+        nonCriticalIssues: inspection.sections.flatMap(s => s.checkpoints).filter(c => !c.critical).length
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to fetch recent inspections:', error)
+    return {
+      success: false,
+      error: 'Failed to fetch recent inspections',
+      data: []
+    }
+  }
 }
 
 export async function getEquipmentByStatus() {
-  const data = await getDashboardData()
-  
-  const statusGroups = {
-    OPERATIONAL: [] as typeof data.equipment,
-    MAINTENANCE: [] as typeof data.equipment,
-    OUT_OF_SERVICE: [] as typeof data.equipment,
-    IN_INSPECTION: [] as typeof data.equipment
-  }
-  
-  data.equipment.forEach(eq => {
-    const status = eq.status as keyof typeof statusGroups
-    if (statusGroups[status]) {
-      statusGroups[status].push(eq)
+  try {
+    // Use aggregation for better performance
+    const equipmentByStatus = await prisma.equipment.groupBy({
+      by: ['status'],
+      _count: {
+        id: true
+      }
+    })
+
+    // Get detailed equipment for each status
+    const statusDetails = await Promise.all(
+      equipmentByStatus.map(async (group) => ({
+        status: group.status,
+        count: group._count.id,
+        equipment: await prisma.equipment.findMany({
+          where: { status: group.status },
+          include: {
+            inspections: {
+              orderBy: { startedAt: 'desc' },
+              take: 1,
+              select: {
+                startedAt: true,
+                status: true
+              }
+            }
+          }
+        })
+      }))
+    )
+
+    return {
+      success: true,
+      data: statusDetails
     }
-  })
-  
-  return statusGroups
+  } catch (error) {
+    console.error('Failed to fetch equipment by status:', error)
+    return {
+      success: false,
+      error: 'Failed to fetch equipment by status',
+      data: []
+    }
+  }
 }
 
 export async function getOverdueInspections(daysSinceLastInspection: number = 30) {
-  const data = await getDashboardData()
-  
-  const overdue = data.equipment.filter(eq => {
-    const lastInspection = eq.inspections?.[0]
-    if (!lastInspection) return true // Never inspected
+  try {
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - daysSinceLastInspection)
     
-    const daysSince = Math.floor(
-      (Date.now() - new Date(lastInspection.startedAt).getTime()) / (1000 * 60 * 60 * 24)
-    )
-    
-    return daysSince > daysSinceLastInspection
-  })
-  
-  return overdue
+    // Get equipment that either:
+    // 1. Has never been inspected
+    // 2. Last inspection was before cutoff date
+    const overdueEquipment = await prisma.equipment.findMany({
+      where: {
+        OR: [
+          {
+            inspections: {
+              none: {}
+            }
+          },
+          {
+            inspections: {
+              every: {
+                startedAt: {
+                  lt: cutoffDate
+                }
+              }
+            }
+          }
+        ]
+      },
+      include: {
+        inspections: {
+          orderBy: { startedAt: 'desc' },
+          take: 1,
+          select: {
+            startedAt: true,
+            status: true
+          }
+        }
+      }
+    })
+
+    return {
+      success: true,
+      data: overdueEquipment.map(equipment => ({
+        ...equipment,
+        daysSinceLastInspection: equipment.inspections[0] 
+          ? Math.floor((Date.now() - new Date(equipment.inspections[0].startedAt).getTime()) / (1000 * 60 * 60 * 24))
+          : null
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to fetch overdue inspections:', error)
+    return {
+      success: false,
+      error: 'Failed to fetch overdue inspections',
+      data: []
+    }
+  }
+}
+
+export async function getDashboardMetrics() {
+  try {
+    const [
+      totalEquipment,
+      operationalCount,
+      maintenanceCount,
+      outOfServiceCount,
+      activeInspections,
+      completedToday,
+      overdueCount
+    ] = await Promise.all([
+      prisma.equipment.count(),
+      prisma.equipment.count({ where: { status: 'OPERATIONAL' } }),
+      prisma.equipment.count({ where: { status: 'MAINTENANCE' } }),
+      prisma.equipment.count({ where: { status: 'OUT_OF_SERVICE' } }),
+      prisma.inspection.count({ where: { status: 'IN_PROGRESS' } }),
+      prisma.inspection.count({
+        where: {
+          completedAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0))
+          }
+        }
+      }),
+      // Count equipment not inspected in last 30 days
+      prisma.equipment.count({
+        where: {
+          OR: [
+            { inspections: { none: {} } },
+            {
+              inspections: {
+                every: {
+                  startedAt: {
+                    lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                  }
+                }
+              }
+            }
+          ]
+        }
+      })
+    ])
+
+    return {
+      success: true,
+      metrics: {
+        totalEquipment,
+        operationalCount,
+        maintenanceCount,
+        outOfServiceCount,
+        activeInspections,
+        completedToday,
+        overdueCount
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch dashboard metrics:', error)
+    return {
+      success: false,
+      error: 'Failed to fetch dashboard metrics',
+      metrics: null
+    }
+  }
 }

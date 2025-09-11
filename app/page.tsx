@@ -1,30 +1,24 @@
 import Link from 'next/link'
-import { mockStorage } from '@/lib/mock-storage'
+import { prisma } from '@/lib/prisma'
+import { InspectionStatus } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
 async function getEquipment() {
-  // Check if DATABASE_URL exists
-  if (!process.env.DATABASE_URL) {
-    console.log('Using mock data - DATABASE_URL not configured')
-    const equipment = mockStorage.equipment.getAll()
-    // Add hasInProgressInspection flag for mock data
-    return equipment.map(eq => ({
-      ...eq,
-      hasInProgressInspection: eq.status === 'IN_INSPECTION'
-    }))
-  }
-
   try {
-    const { prisma } = await import('@/lib/prisma')
     const equipment = await prisma.equipment.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
         inspections: {
           where: {
-            status: 'IN_PROGRESS'
+            status: InspectionStatus.IN_PROGRESS
           },
           take: 1,
+          select: {
+            id: true,
+            status: true,
+            startedAt: true
+          }
         },
       },
     })
@@ -32,20 +26,70 @@ async function getEquipment() {
     // Add a flag to indicate if there's an in-progress inspection
     return equipment.map(eq => ({
       ...eq,
-      hasInProgressInspection: eq.inspections.length > 0 && eq.inspections[0].status === 'IN_PROGRESS'
+      hasInProgressInspection: eq.inspections.length > 0
     }))
   } catch (error) {
-    console.error('Database connection failed, using mock data:', error)
-    const equipment = mockStorage.equipment.getAll()
-    return equipment.map(eq => ({
-      ...eq,
-      hasInProgressInspection: eq.status === 'IN_INSPECTION'
-    }))
+    console.error('Failed to fetch equipment:', error)
+    return []
   }
 }
 
 export default async function HomePage() {
   const equipment = await getEquipment()
+
+  if (!equipment || equipment.length === 0) {
+    return (
+      <div className="container">
+        <div className="page-header">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h1 className="page-title">
+                Equipment Inspection Platform
+              </h1>
+              <p className="page-subtitle">
+                No equipment found. Add equipment to begin.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <Link href="/dashboard">
+                <button className="btn btn-primary">
+                  📊 Dashboard
+                </button>
+              </Link>
+              <Link href="/templates">
+                <button className="btn btn-secondary">
+                  ⚙️ Templates
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '48px' }}>
+          <Link href="/equipment/new" style={{ textDecoration: 'none' }}>
+            <div className="card" style={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              alignItems: 'center', 
+              justifyContent: 'center',
+              minHeight: '240px',
+              cursor: 'pointer',
+              border: '2px dashed #D1D5DB',
+              transition: 'all 0.2s',
+              padding: '32px',
+              maxWidth: '400px'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>➕</div>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Add Equipment</h3>
+              <p style={{ color: '#6B7280', textAlign: 'center' }}>
+                Register new equipment to start inspections
+              </p>
+            </div>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="container">
@@ -88,7 +132,7 @@ export default async function HomePage() {
                     {item.model}
                   </h2>
                   <p className="equipment-subtitle">
-                    {item.type} • {item.serial}
+                    {item.type.replace('_', ' ')} • {item.serial}
                   </p>
                 </div>
                 <span className={`status-badge status-${item.status.toLowerCase().replace('_', '-')}`}>
@@ -110,7 +154,7 @@ export default async function HomePage() {
                     <span className="equipment-icon">⚠️</span>
                     <span style={{ fontWeight: '600' }}>Inspection in progress</span>
                   </div>
-                ) : item.inspections && item.inspections[0] && item.inspections[0].status !== 'IN_PROGRESS' && (
+                ) : item.inspections && item.inspections[0] && (
                   <div className="equipment-detail-item">
                     <span className="equipment-icon">✓</span>
                     <span>Last: {new Date(item.inspections[0].startedAt).toLocaleDateString()}</span>
@@ -148,19 +192,10 @@ export default async function HomePage() {
             transition: 'all 0.2s',
             height: '100%'
           }}>
-            <div style={{
-              fontSize: '48px',
-              color: '#9CA3AF',
-              marginBottom: '12px'
-            }}>
-              +
-            </div>
-            <p style={{ 
-              fontSize: '16px', 
-              fontWeight: '600',
-              color: '#6B7280'
-            }}>
-              Add Equipment
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>➕</div>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Add Equipment</h3>
+            <p style={{ color: '#6B7280', textAlign: 'center' }}>
+              Register new equipment
             </p>
           </div>
         </Link>

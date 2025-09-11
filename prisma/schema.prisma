@@ -7,16 +7,53 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums for type safety
+enum EquipmentType {
+  BOOM_LIFT
+  SCISSOR_LIFT
+  TELEHANDLER
+  FORKLIFT
+  OTHER
+}
+
+enum EquipmentStatus {
+  OPERATIONAL
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum InspectionStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum CheckpointStatus {
+  PASS
+  CORRECTED
+  ACTION_REQUIRED
+}
+
+enum UserRole {
+  TECHNICIAN
+  SUPERVISOR
+  ADMIN
+}
+
 model Equipment {
   id           String       @id @default(cuid())
-  type         String
+  type         EquipmentType
   model        String
   serial       String       @unique
   location     String
   hoursUsed    Int          @default(0)
-  status       String       @default("OPERATIONAL")
+  status       EquipmentStatus @default(OPERATIONAL)
   inspections  Inspection[]
   createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([status])
+  @@index([type])
 }
 
 model Inspection {
@@ -25,10 +62,16 @@ model Inspection {
   equipment    Equipment    @relation(fields: [equipmentId], references: [id])
   technicianId String
   technician   User         @relation(fields: [technicianId], references: [id])
-  status       String       @default("IN_PROGRESS")
+  status       InspectionStatus @default(IN_PROGRESS)
   sections     Section[]
+  templateId   String?
   startedAt    DateTime     @default(now())
   completedAt  DateTime?
+  updatedAt    DateTime     @updatedAt
+
+  @@index([equipmentId])
+  @@index([status])
+  @@index([startedAt])
 }
 
 model Section {
@@ -48,18 +91,25 @@ model Checkpoint {
   code           String
   name           String
   critical       Boolean  @default(false)
-  status         String?
-  notes          String?
+  status         CheckpointStatus?
+  notes          String?  @db.Text
   estimatedHours Float?
   order          Int
   media          Media[]
+  updatedAt      DateTime @updatedAt
 }
 
 model User {
   id          String       @id @default(cuid())
   email       String       @unique
   name        String
+  password    String?      // For NextAuth
+  role        UserRole     @default(TECHNICIAN)
   inspections Inspection[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([email])
 }
 
 model Media {
@@ -67,8 +117,10 @@ model Media {
   checkpointId String
   checkpoint   Checkpoint @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
   type         String     // 'photo' or 'video'
-  url          String
+  data         String     @db.Text // Base64 encoded file data
   filename     String
+  mimeType     String
+  size         Int        // File size in bytes
   createdAt    DateTime   @default(now())
 }
 
@@ -76,8 +128,8 @@ model Media {
 model InspectionTemplate {
   id              String                @id @default(cuid())
   name            String
-  description     String?
-  equipmentType   String                // BOOM_LIFT, SCISSOR_LIFT, TELEHANDLER, etc.
+  description     String?               @db.Text
+  equipmentType   EquipmentType
   isDefault       Boolean               @default(false)
   parentTemplateId String?
   parentTemplate  InspectionTemplate?   @relation("TemplateHierarchy", fields: [parentTemplateId], references: [id])
@@ -85,6 +137,9 @@ model InspectionTemplate {
   sections        TemplateSection[]
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
+
+  @@index([equipmentType])
+  @@index([isDefault])
 }
 
 model TemplateSection {
