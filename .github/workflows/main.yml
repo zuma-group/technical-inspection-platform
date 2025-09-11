@@ -103,7 +103,7 @@ jobs:
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no"
           
           # Clean up and clone repository
-          APP_DIR="/home/ubuntu/technical-inspection-platform-prod"
+          APP_DIR="/home/ubuntu/technical-inspection-platform"
           ENV_BACKUP="/tmp/.env.backup"
           
           # Backup .env file if it exists
@@ -126,8 +126,8 @@ jobs:
           if [ ! -d "$APP_DIR" ]; then
             echo "📥 Cloning repository..."
             cd /home/ubuntu
-            git clone git@github.com:${{ github.repository }}.git technical-inspection-platform-prod
-            cd technical-inspection-platform-prod
+            git clone git@github.com:${{ github.repository }}.git technical-inspection-platform
+            cd technical-inspection-platform
             git checkout ${{ github.ref }}
             
             # Restore .env file if we had a backup
