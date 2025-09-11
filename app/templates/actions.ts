@@ -76,9 +76,30 @@ export async function createTemplate(data: {
 }) {
   if (!process.env.DATABASE_URL) {
     console.log('Mock mode: Creating template', data)
+    // Transform sections to match MockTemplate structure
+    const sectionsWithIds = data.sections.map((section, idx) => ({
+      id: `sec-temp-${Date.now()}-${idx}`,
+      name: section.name,
+      code: section.code,
+      order: section.order,
+      templateId: undefined,
+      checkpoints: section.checkpoints.map((cp, cpIdx) => ({
+        id: `cp-temp-${Date.now()}-${idx}-${cpIdx}`,
+        code: cp.code,
+        name: cp.name,
+        critical: cp.critical,
+        order: cp.order,
+        sectionId: undefined
+      }))
+    }))
+    
     const newTemplate = mockStorage.templates.create({
-      ...data,
-      isDefault: false  // Add the required isDefault field
+      name: data.name,
+      description: data.description,
+      equipmentType: data.equipmentType,
+      parentTemplateId: data.parentTemplateId,
+      isDefault: false,
+      sections: sectionsWithIds
     })
     revalidatePath('/templates')
     return newTemplate
