@@ -164,6 +164,10 @@ jobs:
             exit 1
           fi
           
+          # Stop current application
+          echo "🛑 Stopping current containers..."
+          docker compose -f docker-compose.postgres.yml down || true
+          
           # Check for port conflicts
           echo "🔍 Checking for port conflicts..."
           USED_PORTS=$(docker ps --format '{{.Ports}}' | grep -oP '\d+(?=->)' | sort -n | uniq || echo "")
@@ -174,10 +178,6 @@ jobs:
             exit 1
           fi
           echo "✅ Port 3002 is available"
-          
-          # Stop current application
-          echo "🛑 Stopping current containers..."
-          docker compose -f docker-compose.postgres.yml down || true
           
           # Rebuild and restart containers
           echo "🔨 Building and starting containers..."
