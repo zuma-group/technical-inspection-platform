@@ -93,7 +93,8 @@ jobs:
         script: |
           # Set up SSH key for GitHub access
           mkdir -p ~/.ssh
-          echo "${{ secrets.PROD_DEPLOY_SSH_KEY }}" | base64 -d > ~/.ssh/deploy_key
+          printf "%s" "${{ secrets.PROD_DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          sed -i 's/\r$//' ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           
           # Add GitHub to known hosts
@@ -168,16 +169,16 @@ jobs:
           echo "🛑 Stopping current containers..."
           docker compose -f docker-compose.postgres.yml down || true
           
-          # Check for port conflicts (using port 3002 for production)
+          # Check for port conflicts (using port 3005 for production)
           echo "🔍 Checking for port conflicts..."
           USED_PORTS=$(docker ps --format '{{.Ports}}' | grep -oP '\d+(?=->)' | sort -n | uniq || echo "")
-          if echo "$USED_PORTS" | grep -q "3002"; then
-            echo "❌ Port 3002 is already in use!"
-            echo "Used ports: $USED_PORTS"
-            echo "Please stop the conflicting service or update docker-compose.postgres.yml to use a different port"
-            exit 1
+          if echo "$USED_PORTS" | grep -q "3005"; then
+           echo "❌ Port 3005 is already in use!"
+           echo "Used ports: $USED_PORTS"
+           echo "Please stop the conflicting service or update docker-compose.postgres.yml to use a different port"
+           exit 1
           fi
-          echo "✅ Port 3002 is available"
+          echo "✅ Port 3005 is available"
           
           # Rebuild and restart containers
           echo "🔨 Building and starting containers..."
@@ -200,14 +201,14 @@ jobs:
             echo "🔍 Container status:"
             docker compose -f docker-compose.postgres.yml ps
             
-            # Test if the app responds
-            echo "🌐 Testing application response..."
-            sleep 5
-            if curl -f http://localhost:3002/ >/dev/null 2>&1; then
-              echo "✅ Application is responding!"
-            else
-              echo "⚠️  Application might still be starting up"
-            fi
+          # Test if the app responds
+          echo "🌐 Testing application response..."
+          sleep 5
+          if curl -f http://localhost:3005/ >/dev/null 2>&1; then
+           echo "✅ Application is responding!"
+          else
+           echo "⚠️  Application might still be starting up"
+          fi
           else
             echo "❌ Deployment failed!"
             echo "📋 Container logs:"
