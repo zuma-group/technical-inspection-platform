@@ -103,7 +103,7 @@ jobs:
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no"
           
           # Clean up and clone repository
-          APP_DIR="/home/ubuntu/technical-inspection-platform"
+          APP_DIR="/home/ubuntu/technical-inspection-platform-prod"
           ENV_BACKUP="/tmp/.env.backup"
           
           # Backup .env file if it exists
@@ -118,7 +118,7 @@ jobs:
             if ! git status >/dev/null 2>&1; then
               echo "🧹 Removing corrupted directory..."
               cd /home/ubuntu
-              rm -rf technical-inspection-platform
+              rm -rf technical-inspection-platform-prod
             fi
           fi
           
@@ -126,8 +126,8 @@ jobs:
           if [ ! -d "$APP_DIR" ]; then
             echo "📥 Cloning repository..."
             cd /home/ubuntu
-            git clone git@github.com:${{ github.repository }}.git technical-inspection-platform
-            cd technical-inspection-platform
+            git clone git@github.com:${{ github.repository }}.git technical-inspection-platform-prod
+            cd technical-inspection-platform-prod
             git checkout main
             
             # Restore .env file if we had a backup
