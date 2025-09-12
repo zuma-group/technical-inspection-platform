@@ -143,7 +143,7 @@ export default function EquipmentList({ equipment }: { equipment: any[] }) {
       {filteredEquipment.length === 0 && searchTerm && (
         <div className="text-center py-12">
           <Icons.search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">No equipment found matching "{searchTerm}"</p>
+          <p className="text-gray-500">No equipment found matching &quot;{searchTerm}&quot;</p>
         </div>
       )}
     </>

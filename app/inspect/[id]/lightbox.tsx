@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { Icons } from '@/lib/icons'
 
@@ -18,6 +18,14 @@ export default function Lightbox({ isOpen, onClose, media, initialIndex = 0 }: L
     setCurrentIndex(initialIndex)
   }, [initialIndex])
 
+  const goToPrevious = useCallback(() => {
+    setCurrentIndex((prev) => (prev - 1 + media.length) % media.length)
+  }, [media.length])
+
+  const goToNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev + 1) % media.length)
+  }, [media.length])
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return
@@ -33,19 +41,13 @@ export default function Lightbox({ isOpen, onClose, media, initialIndex = 0 }: L
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, currentIndex])
+  }, [isOpen, onClose, goToPrevious, goToNext])
 
   if (!isOpen || !media || media.length === 0) return null
 
   const currentMedia = media[currentIndex]
 
-  const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev - 1 + media.length) % media.length)
-  }
-
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % media.length)
-  }
+  
 
   return (
     <div 
@@ -89,9 +91,11 @@ export default function Lightbox({ isOpen, onClose, media, initialIndex = 0 }: L
               className="max-w-full max-h-[90vh] rounded-lg"
             />
           ) : (
-            <img
+            <Image
               src={currentMedia.dataUrl || `/api/media/${currentMedia.id}`}
               alt="Inspection media"
+              width={1920}
+              height={1080}
               className="max-w-full max-h-[90vh] object-contain rounded-lg"
             />
           )}

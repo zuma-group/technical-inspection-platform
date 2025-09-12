@@ -67,24 +67,27 @@ export default function NewTemplatePage() {
             inherited: true
           }))
         }))
-        
-        // Keep any additional sections that were added
-        const additionalSections = sections.filter(s => !s.inherited)
-        setSections([...inheritedSections, ...additionalSections])
+
+        setSections((prev) => {
+          const additionalSections = prev.filter(s => !s.inherited)
+          return [...inheritedSections, ...additionalSections]
+        })
       }
     } else {
-      // Remove inherited sections if no parent is selected
-      setSections(sections.filter(s => !s.inherited))
-      if (sections.filter(s => !s.inherited).length === 0) {
-        setSections([{
-          id: 'temp-1',
-          name: '',
-          code: '',
-          order: 1,
-          checkpoints: [],
-          inherited: false
-        }])
-      }
+      setSections((prev) => {
+        const nonInherited = prev.filter(s => !s.inherited)
+        if (nonInherited.length === 0) {
+          return [{
+            id: 'temp-1',
+            name: '',
+            code: '',
+            order: 1,
+            checkpoints: [],
+            inherited: false
+          }]
+        }
+        return nonInherited
+      })
     }
   }, [parentTemplateId, availableTemplates])
 
