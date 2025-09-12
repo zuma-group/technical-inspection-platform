@@ -89,14 +89,16 @@ jobs:
       
     - name: Create deployment package
       run: |
-        # Create a tar package excluding unnecessary files
-        tar -czf deployment.tar.gz \
+        # Create tar in temp dir to avoid "file changed as we read it" when writing into '.'
+        TMP_TAR="$RUNNER_TEMP/deployment.tar.gz"
+        tar -czf "$TMP_TAR" \
           --exclude='.git' \
           --exclude='node_modules' \
           --exclude='.next' \
           --exclude='coverage' \
           --exclude='*.log' \
-          .
+          -C "$GITHUB_WORKSPACE" .
+        mv "$TMP_TAR" "$GITHUB_WORKSPACE/deployment.tar.gz"
           
     - name: Upload deployment package to Production EC2
       uses: appleboy/scp-action@v0.1.7
