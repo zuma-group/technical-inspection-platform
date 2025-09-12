@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { Icons, iconSizes } from '@/lib/icons'
 
 interface CustomSelectProps {
   value: string
@@ -38,104 +39,55 @@ export default function CustomSelect({
   return (
     <div 
       ref={dropdownRef}
-      className={`custom-select ${className}`}
-      style={{ position: 'relative' }}
+      className={`relative ${className}`}
     >
       <button
         type="button"
-        className="custom-select-trigger"
+        className={`
+          w-full px-4 py-3 pr-10 border-2 border-gray-300 rounded-lg text-base text-left
+          transition-all duration-200 outline-none relative
+          ${disabled ? 'bg-gray-50 cursor-not-allowed' : 'bg-white cursor-pointer hover:border-blue-400 hover:shadow-md focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'}
+          ${selectedOption ? 'text-gray-900' : 'text-gray-500'}
+          ${isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : ''}
+        `}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        style={{
-          width: '100%',
-          padding: '12px',
-          paddingRight: '40px',
-          border: '2px solid #E5E7EB',
-          borderRadius: '8px',
-          fontSize: '16px',
-          textAlign: 'left',
-          background: disabled ? '#F9FAFB' : 'white',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          position: 'relative',
-          transition: 'all 0.2s',
-          outline: 'none',
-          color: selectedOption ? '#111827' : '#6B7280'
-        }}
       >
         {selectedOption ? selectedOption.label : placeholder}
-        <svg 
-          style={{
-            position: 'absolute',
-            right: '12px',
-            top: '50%',
-            transform: `translateY(-50%) ${isOpen ? 'rotate(180deg)' : ''}`,
-            transition: 'transform 0.2s',
-            width: '20px',
-            height: '20px'
-          }}
-          xmlns="http://www.w3.org/2000/svg" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke={disabled ? '#9CA3AF' : '#6B7280'}
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <Icons.chevronDown 
+          className={`
+            absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 transition-transform duration-200
+            ${isOpen ? 'rotate-180' : ''}
+            ${disabled ? 'text-gray-400' : 'text-gray-600'}
+          `}
+        />
       </button>
 
       {isOpen && !disabled && (
-        <div 
-          className="custom-select-dropdown"
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            marginTop: '4px',
-            background: 'white',
-            border: '2px solid #E5E7EB',
-            borderRadius: '8px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-            zIndex: 1000,
-            maxHeight: '300px',
-            overflowY: 'auto'
-          }}
-        >
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-gray-200 rounded-lg shadow-xl z-50 max-h-72 overflow-y-auto animate-in fade-in-10 slide-in-from-top-2 duration-200">
           {options.map((option) => (
             <button
               key={option.value}
               type="button"
-              className="custom-select-option"
+              className={`
+                w-full px-4 py-3 text-left text-base transition-all duration-150
+                hover:bg-gray-50 hover:pl-5
+                ${value === option.value 
+                  ? 'bg-blue-50 text-blue-600 font-semibold border-l-4 border-blue-500' 
+                  : 'text-gray-900 hover:text-gray-700'
+                }
+              `}
               onClick={() => {
                 onChange(option.value)
                 setIsOpen(false)
               }}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                textAlign: 'left',
-                background: value === option.value ? '#EBF5FF' : 'transparent',
-                border: 'none',
-                fontSize: '16px',
-                cursor: 'pointer',
-                transition: 'background 0.2s',
-                color: value === option.value ? '#2563EB' : '#111827',
-                fontWeight: value === option.value ? '600' : '400'
-              }}
-              onMouseEnter={(e) => {
-                if (value !== option.value) {
-                  e.currentTarget.style.background = '#F9FAFB'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (value !== option.value) {
-                  e.currentTarget.style.background = 'transparent'
-                }
-              }}
             >
-              {option.label}
+              <div className="flex items-center justify-between">
+                <span>{option.label}</span>
+                {value === option.value && (
+                  <Icons.check className="w-4 h-4 text-blue-600" />
+                )}
+              </div>
             </button>
           ))}
         </div>

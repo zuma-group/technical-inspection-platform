@@ -155,4 +155,20 @@
     -ms-user-select: none;
     user-select: none;
   }
+
+  /* Custom animations */
+  @keyframes animate-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-in {
+    animation: animate-in 0.2s ease-out;
+  }
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { deleteTemplate } from './actions'
+import { Icons } from '@/lib/icons'
 
 export default function DeleteButton({ templateId, templateName, isDefault }: { 
   templateId: string
@@ -38,14 +39,21 @@ export default function DeleteButton({ templateId, templateName, isDefault }: {
     <button
       onClick={handleDelete}
       disabled={isDeleting || isDefault}
-      className="btn btn-danger"
-      style={{ 
-        width: '100%',
-        opacity: isDefault ? 0.5 : 1,
-        cursor: isDefault ? 'not-allowed' : 'pointer'
-      }}
+      className={`btn btn-danger w-full text-sm py-2 transition-all duration-200 inline-flex items-center justify-center gap-1 ${
+        isDefault ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 hover:shadow-lg'
+      }`}
     >
-      {isDeleting ? 'Deleting...' : 'Delete'}
+      {isDeleting ? (
+        <>
+          <Icons.loader className="w-3 h-3 animate-spin" />
+          <span>Deleting...</span>
+        </>
+      ) : (
+        <>
+          <Icons.delete className="w-3 h-3" />
+          <span>Delete</span>
+        </>
+      )}
     </button>
   )
 }

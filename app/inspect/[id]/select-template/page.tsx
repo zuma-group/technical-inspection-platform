@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getTemplates } from '@/app/templates/actions'
 import { prisma } from '@/lib/prisma'
+import { Icons, iconSizes } from '@/lib/icons'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -27,15 +28,17 @@ export default async function SelectTemplatePage({
   
   if (!equipment) {
     return (
-      <div className="container">
-        <div className="page-header">
-          <h1 className="page-title">Equipment Not Found</h1>
-          <p className="page-subtitle">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="text-center py-12">
+          <Icons.alertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Equipment Not Found</h1>
+          <p className="text-gray-600 mb-6">
             The equipment you&apos;re looking for doesn&apos;t exist.
           </p>
           <Link href="/">
-            <button className="btn btn-primary" style={{ marginTop: '20px' }}>
-              Back to Equipment
+            <button className="btn btn-primary inline-flex items-center gap-2 hover:scale-105 transition-transform duration-200">
+              <Icons.back className={iconSizes.sm} />
+              <span>Back to Equipment</span>
             </button>
           </Link>
         </div>
@@ -65,49 +68,54 @@ export default async function SelectTemplatePage({
   )
 
   return (
-    <div className="container">
-      <div className="page-header">
-        <div style={{ marginBottom: '24px' }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-8">
+        <div className="mb-6">
           <Link href="/">
-            <button className="btn btn-secondary" style={{ padding: '8px 16px' }}>
-              ← Back to Equipment
+            <button className="btn btn-secondary inline-flex items-center gap-2 hover:scale-105 transition-transform duration-200">
+              <Icons.back className={iconSizes.sm} />
+              <span>Back to Equipment</span>
             </button>
           </Link>
         </div>
-        <h1 className="page-title">Select Inspection Template</h1>
-        <p className="page-subtitle">
+        <h1 className="text-3xl font-bold text-gray-900">Select Inspection Template</h1>
+        <p className="text-gray-600 mt-2">
           For {equipment.model} ({equipment.serial})
         </p>
       </div>
 
-      <div className="templates-grid">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Default Template Option */}
-        <Link href={`/inspect/${id}`} style={{ textDecoration: 'none' }}>
-          <div className="card template-card" style={{ 
-            border: '2px solid #2563EB',
-            cursor: 'pointer'
-          }}>
-            <div style={{ marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
-                Quick Inspection
-              </h2>
-              <p style={{ fontSize: '14px', color: '#6B7280' }}>
+        <Link href={`/inspect/${id}`} className="no-underline group">
+          <div className="card border-2 border-blue-500 cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 h-full flex flex-col">
+            <div className="flex-1 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Icons.gauge className="w-5 h-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Quick Inspection
+                </h2>
+              </div>
+              <p className="text-sm text-gray-600">
                 {defaultTemplate 
                   ? `Use default ${equipment.type.replace(/_/g, ' ').toLowerCase()} template`
                   : 'Use basic inspection template'
                 }
               </p>
               {defaultTemplate && (
-                <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '12px' }}>
-                  <span>{defaultTemplate.sections.length} sections</span>
-                  <span style={{ margin: '0 8px' }}>•</span>
-                  <span>
+                <div className="text-xs text-gray-600 mt-3 flex items-center gap-2">
+                  <span className="flex items-center gap-1">
+                    <Icons.document className="w-3 h-3" />
+                    {defaultTemplate.sections.length} sections
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Icons.checkSquare className="w-3 h-3" />
                     {defaultTemplate.sections.reduce((acc, section) => acc + section.checkpoints.length, 0)} checkpoints
                   </span>
                 </div>
               )}
             </div>
-            <button className="btn btn-primary" style={{ width: '100%' }}>
+            <button className="btn btn-primary w-full group-hover:shadow-lg transition-shadow duration-200">
               Start Inspection
             </button>
           </div>
@@ -120,55 +128,59 @@ export default async function SelectTemplatePage({
             <Link 
               key={template.id} 
               href={`/inspect/${id}?template=${template.id}`}
-              style={{ textDecoration: 'none' }}
+              className="no-underline group"
             >
-              <div className="card template-card" style={{ 
-                cursor: 'pointer',
-                border: isRecommended ? '2px solid #10B981' : undefined
-              }}>
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '600' }}>{template.name}</h2>
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              <div className={`card cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 h-full flex flex-col ${
+                isRecommended ? 'border-2 border-green-500' : ''
+              }`}>
+                <div className="flex-1 mb-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h2 className="text-lg font-semibold text-gray-900">{template.name}</h2>
+                    <div className="flex gap-1 flex-wrap">
                       {isRecommended && (
-                        <span className="status-badge" style={{ background: '#D1FAE5', color: '#065F46' }}>
+                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
                           RECOMMENDED
                         </span>
                       )}
                       {template.parentTemplateId && (
-                        <span className="status-badge" style={{ background: '#F0F9FF', color: '#1E40AF' }}>
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full">
                           EXTENDED
                         </span>
                       )}
                       {template.isDefault && (
-                        <span className="status-badge" style={{ background: '#DBEAFE', color: '#1E40AF' }}>
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
                           DEFAULT
                         </span>
                       )}
                     </div>
                   </div>
-                  <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+                  <p className="text-sm text-gray-600 mb-2">
                     For: {template.equipmentType.replace(/_/g, ' ')}
                   </p>
                   {template.parentTemplateId && (
-                    <p style={{ fontSize: '13px', color: '#1E40AF', marginBottom: '8px' }}>
-                      ↳ Extends: {allTemplates.find(t => t.id === template.parentTemplateId)?.name || 'Parent template'}
+                    <p className="text-xs text-blue-600 mb-2 flex items-center gap-1">
+                      <Icons.chevronRight className="w-3 h-3" />
+                      Extends: {allTemplates.find(t => t.id === template.parentTemplateId)?.name || 'Parent template'}
                     </p>
                   )}
                 {template.description && (
-                  <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '12px' }}>
+                  <p className="text-xs text-gray-500 mb-3 line-clamp-2">
                     {template.description}
                   </p>
                 )}
-                <div style={{ fontSize: '13px', color: '#6B7280' }}>
-                  <span>{template.sections.length} sections</span>
-                  <span style={{ margin: '0 8px' }}>•</span>
-                  <span>
+                <div className="text-xs text-gray-600 flex items-center gap-2">
+                  <span className="flex items-center gap-1">
+                    <Icons.document className="w-3 h-3" />
+                    {template.sections.length} sections
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Icons.checkSquare className="w-3 h-3" />
                     {template.sections.reduce((acc, section) => acc + section.checkpoints.length, 0)} checkpoints
                   </span>
                 </div>
               </div>
-              <button className="btn btn-secondary" style={{ width: '100%' }}>
+              <button className="btn btn-secondary w-full group-hover:shadow-lg transition-shadow duration-200">
                 Use Template
               </button>
             </div>
@@ -178,27 +190,30 @@ export default async function SelectTemplatePage({
       </div>
 
       {allTemplates.length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: '40px 20px', marginTop: '20px' }}>
-          <p style={{ color: '#6B7280', marginBottom: '20px' }}>
+        <div className="card text-center py-10 px-5 mt-5">
+          <Icons.document className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 mb-5">
             No custom templates available yet.
           </p>
           <Link href="/templates/new">
-            <button className="btn btn-primary">
-              Create Template
+            <button className="btn btn-primary inline-flex items-center gap-2 hover:scale-105 transition-transform duration-200">
+              <Icons.add className={iconSizes.sm} />
+              <span>Create Template</span>
             </button>
           </Link>
         </div>
       )}
       
       {allTemplates.length > 0 && (
-        <div style={{ textAlign: 'center', marginTop: '24px', paddingBottom: '24px' }}>
-          <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '12px' }}>
+        <div className="text-center mt-6 pb-6">
+          <p className="text-sm text-gray-600 mb-3">
             Showing {allTemplates.length} template{allTemplates.length !== 1 ? 's' : ''}
             {` for inspection of ${equipment.model}`}
           </p>
           <Link href="/templates/new">
-            <button className="btn btn-secondary">
-              + Create New Template
+            <button className="btn btn-secondary inline-flex items-center gap-2 hover:scale-105 transition-transform duration-200">
+              <Icons.add className={iconSizes.sm} />
+              <span>Create New Template</span>
             </button>
           </Link>
         </div>

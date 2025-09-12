@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createEquipment } from '../actions'
 import CustomSelect from '@/app/components/custom-select'
+import { Icons, iconSizes } from '@/lib/icons'
 
 export default function NewEquipmentPage() {
   const router = useRouter()
@@ -36,22 +37,23 @@ export default function NewEquipmentPage() {
   }
 
   return (
-    <div className="container">
-      <div className="page-header">
-        <div style={{ marginBottom: '24px' }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-8">
+        <div className="mb-6">
           <Link href="/">
-            <button className="btn btn-secondary" style={{ padding: '8px 16px' }}>
-              ← Back to Equipment
+            <button className="btn btn-secondary inline-flex items-center gap-2 hover:scale-105 transition-transform duration-200">
+              <Icons.back className={iconSizes.sm} />
+              <span>Back to Equipment</span>
             </button>
           </Link>
         </div>
-        <h1 className="page-title">Add New Equipment</h1>
-        <p className="page-subtitle">Register new equipment for inspection</p>
+        <h1 className="text-3xl font-bold text-gray-900">Add New Equipment</h1>
+        <p className="text-gray-600 mt-2">Register new equipment for inspection</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+      <form onSubmit={handleSubmit} className="card max-w-2xl mx-auto shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
             Model Name *
           </label>
           <input
@@ -60,18 +62,12 @@ export default function NewEquipmentPage() {
             onChange={(e) => setFormData({ ...formData, model: e.target.value })}
             placeholder="e.g., Genie Z-45/25J"
             required
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px'
-            }}
+            className="form-input focus:scale-[1.01] transition-transform duration-200"
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
             Equipment Type *
           </label>
           <CustomSelect
@@ -88,8 +84,8 @@ export default function NewEquipmentPage() {
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
             Serial Number *
           </label>
           <input
@@ -98,18 +94,12 @@ export default function NewEquipmentPage() {
             onChange={(e) => setFormData({ ...formData, serial: e.target.value })}
             placeholder="e.g., SN123456789"
             required
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px'
-            }}
+            className="form-input focus:scale-[1.01] transition-transform duration-200"
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
             Location *
           </label>
           <input
@@ -118,18 +108,12 @@ export default function NewEquipmentPage() {
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             placeholder="e.g., Site A - North Yard"
             required
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px'
-            }}
+            className="form-input focus:scale-[1.01] transition-transform duration-200"
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
             Hours Used
           </label>
           <input
@@ -137,18 +121,12 @@ export default function NewEquipmentPage() {
             value={formData.hoursUsed}
             onChange={(e) => setFormData({ ...formData, hoursUsed: parseInt(e.target.value) || 0 })}
             min="0"
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px'
-            }}
+            className="form-input focus:scale-[1.01] transition-transform duration-200"
           />
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
             Status
           </label>
           <CustomSelect
@@ -163,31 +141,27 @@ export default function NewEquipmentPage() {
           />
         </div>
 
-        <div style={{ 
-          display: 'flex', 
-          gap: '12px', 
-          justifyContent: 'flex-end',
-          paddingTop: '20px',
-          borderTop: '1px solid #E5E7EB'
-        }}>
+        <div className="flex gap-3 justify-end pt-5 border-t border-gray-200">
           <button
             type="button"
             onClick={() => router.push('/')}
-            className="btn btn-secondary"
+            className="btn btn-secondary hover:scale-105 transition-all duration-200 inline-flex items-center gap-2"
           >
-            Cancel
+            <Icons.close className={iconSizes.sm} />
+            <span>Cancel</span>
           </button>
           <button
             type="submit"
-            className="btn btn-primary"
+            className="btn btn-primary hover:scale-105 hover:shadow-lg transition-all duration-200 inline-flex items-center gap-2"
           >
-            Add Equipment
+            <Icons.add className={iconSizes.sm} />
+            <span>Add Equipment</span>
           </button>
         </div>
       </form>
       
       {/* Add spacing at the bottom */}
-      <div style={{ height: '60px' }}></div>
+      <div className="h-16"></div>
     </div>
   )
 }
