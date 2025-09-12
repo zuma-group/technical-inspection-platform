@@ -70,7 +70,7 @@ export default function EquipmentList({ equipment }: { equipment: any[] }) {
                   item.status === 'OUT_OF_SERVICE' ? 'status-out_of_service' :
                   'bg-gray-100 text-gray-800'
                 }`}>
-                  {item.status.replace('_', ' ')}
+                  {item.status.replace(/_/g, ' ')}
                 </span>
               </div>
               
@@ -104,15 +104,22 @@ export default function EquipmentList({ equipment }: { equipment: any[] }) {
                 </button>
               </Link>
             ) : item.lastCompletedInspection ? (
-              // Show completed status with date - no button for new inspection
-              <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded-lg text-center">
-                <div className="font-semibold flex items-center justify-center gap-2">
-                  <Icons.checkCircle className="w-5 h-5" />
-                  Inspected
+              // Show completed status with date and start over button
+              <div className="flex flex-col gap-3">
+                <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded-lg text-center">
+                  <div className="font-semibold flex items-center justify-center gap-2">
+                    <Icons.checkCircle className="w-5 h-5" />
+                    Inspected
+                  </div>
+                  <div className="text-xs mt-1">
+                    {new Date(item.lastCompletedInspection.completedAt || item.lastCompletedInspection.startedAt).toLocaleDateString()}
+                  </div>
                 </div>
-                <div className="text-xs mt-1">
-                  {new Date(item.lastCompletedInspection.completedAt || item.lastCompletedInspection.startedAt).toLocaleDateString()}
-                </div>
+                <Link href={`/inspect/${item.id}/select-template`} className="no-underline block">
+                  <button className="btn btn-primary w-full">
+                    Start Over
+                  </button>
+                </Link>
               </div>
             ) : (
               <Link href={`/inspect/${item.id}/select-template`} className="no-underline">

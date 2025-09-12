@@ -128,10 +128,9 @@ export default function InspectionClient({ inspection }) {
       console.log('Complete result:', result)
       
       if (result?.success) {
-        // Small delay to ensure database transaction completes
-        setTimeout(() => {
-          window.location.href = '/'
-        }, 100)
+        // Use Next.js router for smooth navigation
+        router.push('/')
+        router.refresh()
       } else {
         alert('Failed to complete inspection. Please try again.')
       }
