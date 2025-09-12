@@ -15,7 +15,14 @@ export default function InspectionClient({ inspection }) {
     isOpen: boolean
     checkpointId: string
     checkpointName: string
-    status: 'CORRECTED' | 'ACTION_REQUIRED'
+    status: 'CORRECTED' | 'ACTION_REQUIRED' | 'PASS' | 'NOT_APPLICABLE'
+    isEditMode?: boolean
+    existingData?: {
+      status: string
+      notes?: string
+      estimatedHours?: number
+      media?: Array<{ id: string; type: string }>
+    }
   } | null>(null)
   const [checkpoints, setCheckpoints] = useState(() => {
     const map = {}
@@ -63,17 +70,21 @@ export default function InspectionClient({ inspection }) {
     notes: string
     estimatedHours?: number
     media: File[]
+    removedMediaIds?: string[]
   }) => {
     if (!modalState) return
 
     // Update local state immediately
+    // Clear notes, hours, and media for PASS and NOT_APPLICABLE statuses
+    const shouldClearData = data.status === 'PASS' || data.status === 'NOT_APPLICABLE'
+    
     setCheckpoints(prev => ({
       ...prev,
       [modalState.checkpointId]: {
         status: data.status,
-        notes: data.notes,
-        estimatedHours: data.estimatedHours,
-        media: prev[modalState.checkpointId].media
+        notes: shouldClearData ? null : data.notes,
+        estimatedHours: shouldClearData ? null : data.estimatedHours,
+        media: shouldClearData ? [] : prev[modalState.checkpointId].media
       }
     }))
 
@@ -81,37 +92,69 @@ export default function InspectionClient({ inspection }) {
     setModalState(null)
 
     startTransition(async () => {
-      // Upload media if any
-      if (data.media.length > 0) {
-        const formData = new FormData()
-        formData.append('checkpointId', modalState.checkpointId)
-        data.media.forEach(file => {
-          formData.append('files', file)
-        })
-        
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        })
-        
-        if (response.ok) {
-          const { media } = await response.json()
+      const shouldClearData = data.status === 'PASS' || data.status === 'NOT_APPLICABLE'
+      
+      // If changing to PASS or N/A, delete all existing media
+      if (shouldClearData && modalState.existingData?.media) {
+        for (const media of modalState.existingData.media) {
+          await fetch(`/api/media/${media.id}`, {
+            method: 'DELETE'
+          })
+        }
+      } else {
+        // Otherwise handle media normally
+        // Upload new media if any
+        if (data.media.length > 0) {
+          const formData = new FormData()
+          formData.append('checkpointId', modalState.checkpointId)
+          data.media.forEach(file => {
+            formData.append('files', file)
+          })
+          
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          })
+          
+          if (response.ok) {
+            const { media } = await response.json()
+            setCheckpoints(prev => ({
+              ...prev,
+              [modalState.checkpointId]: {
+                ...prev[modalState.checkpointId],
+                media: [...prev[modalState.checkpointId].media, ...media]
+              }
+            }))
+          }
+        }
+
+        // Remove deleted media if any
+        if (data.removedMediaIds && data.removedMediaIds.length > 0) {
+          for (const mediaId of data.removedMediaIds) {
+            await fetch(`/api/media/${mediaId}`, {
+              method: 'DELETE'
+            })
+          }
+          // Update local state to remove deleted media
           setCheckpoints(prev => ({
             ...prev,
             [modalState.checkpointId]: {
               ...prev[modalState.checkpointId],
-              media: [...prev[modalState.checkpointId].media, ...media]
+              media: prev[modalState.checkpointId].media.filter(
+                (m: { id: string }) => !data.removedMediaIds?.includes(m.id)
+              )
             }
           }))
         }
       }
 
       // Update checkpoint in database
+      // Clear notes and hours for PASS and N/A statuses
       await updateCheckpoint(
         modalState.checkpointId, 
         data.status, 
-        data.notes,
-        data.estimatedHours
+        shouldClearData ? null : data.notes,
+        shouldClearData ? null : data.estimatedHours
       )
     })
   }
@@ -200,32 +243,45 @@ export default function InspectionClient({ inspection }) {
         </div>
         
         {/* Mobile sections - larger and more spaced */}
-        <div className="bg-white px-4 py-3 border-t border-gray-200">
+        <div className="bg-white px-4 py-4 border-t border-gray-200">
           <div className="overflow-x-auto -mx-4 px-4">
-            <div className="flex gap-3 pb-2">
+            <div className="flex gap-3 pb-2 pt-2">
               {inspection.sections.map((s, i) => {
                 const sectionCompleted = s.checkpoints.filter(cp => checkpoints[cp.id]?.status).length
                 const sectionTotal = s.checkpoints.length
+                const sectionProgress = (sectionCompleted / sectionTotal) * 100
                 const isComplete = sectionCompleted === sectionTotal
                 
                 return (
                   <button
                     key={s.id}
                     onClick={() => setCurrentSection(i)}
-                    className={`flex-shrink-0 min-h-[70px] min-w-[140px] px-8 py-4 rounded-xl transition-all border-2 ${
+                    className={`flex-shrink-0 min-h-[90px] min-w-[160px] px-6 py-3 rounded-xl transition-all border-2 ${
                       i === currentSection 
-                        ? 'bg-blue-700 text-white shadow-xl scale-105 border-blue-900' 
+                        ? 'bg-blue-100 text-blue-700 border-blue-600 shadow-xl scale-105' 
                         : isComplete
-                        ? 'bg-green-600 text-white border-green-800'
-                        : 'bg-teal-600 text-white border-teal-700 shadow-md'
+                        ? 'bg-green-50 text-green-700 border-green-500'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    <div className="font-bold text-base whitespace-nowrap">{s.name}</div>
-                    <div className={`text-sm mt-2 font-semibold`}>
-                      {sectionCompleted} of {sectionTotal} Done
-                      {isComplete && (
-                        <Icons.checkCircle className="inline-block w-4 h-4 ml-1" />
-                      )}
+                    <div className="text-left">
+                      <div className="font-bold text-base whitespace-nowrap">{s.name}</div>
+                      <div className="text-xs mt-1 mb-2">
+                        {sectionCompleted}/{sectionTotal} done
+                        {isComplete && (
+                          <Icons.checkCircle className="inline-block w-4 h-4 ml-1 text-green-600" />
+                        )}
+                      </div>
+                      {/* Progress bar */}
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            sectionProgress === 100 ? 'bg-green-500' : 
+                            sectionProgress > 0 ? 'bg-blue-500' : 'bg-gray-300'
+                          }`}
+                          style={{ width: `${sectionProgress}%` }}
+                        />
+                      </div>
                     </div>
                   </button>
                 )
@@ -352,11 +408,20 @@ export default function InspectionClient({ inspection }) {
                     </div>
                     <button
                       onClick={() => {
-                        // Reset status to allow re-selection
-                        setCheckpoints(prev => ({
-                          ...prev,
-                          [checkpoint.id]: { ...prev[checkpoint.id], status: null }
-                        }))
+                        // Open edit modal with existing data
+                        setModalState({
+                          isOpen: true,
+                          checkpointId: checkpoint.id,
+                          checkpointName: checkpoint.name,
+                          status: cpData.status as 'PASS' | 'CORRECTED' | 'ACTION_REQUIRED' | 'NOT_APPLICABLE',
+                          isEditMode: true,
+                          existingData: {
+                            status: cpData.status,
+                            notes: cpData.notes,
+                            estimatedHours: cpData.estimatedHours,
+                            media: cpData.media
+                          }
+                        })
                       }}
                       className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-semibold"
                     >
@@ -465,6 +530,8 @@ export default function InspectionClient({ inspection }) {
           onSubmit={handleModalSubmit}
           status={modalState.status}
           checkpointName={modalState.checkpointName}
+          isEditMode={modalState.isEditMode}
+          existingData={modalState.existingData}
         />
       )}
     </div>

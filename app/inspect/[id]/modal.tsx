@@ -12,9 +12,17 @@ interface ModalProps {
     notes: string
     estimatedHours?: number
     media: File[]
+    removedMediaIds?: string[]
   }) => void
-  status: 'CORRECTED' | 'ACTION_REQUIRED'
+  status: 'CORRECTED' | 'ACTION_REQUIRED' | 'PASS' | 'NOT_APPLICABLE'
   checkpointName: string
+  isEditMode?: boolean
+  existingData?: {
+    status: string
+    notes?: string
+    estimatedHours?: number
+    media?: Array<{ id: string; type: string }>
+  }
 }
 
 export default function CheckpointModal({ 
@@ -22,12 +30,17 @@ export default function CheckpointModal({
   onClose, 
   onSubmit, 
   status, 
-  checkpointName 
+  checkpointName,
+  isEditMode = false,
+  existingData
 }: ModalProps) {
-  const [notes, setNotes] = useState('')
-  const [estimatedHours, setEstimatedHours] = useState('')
+  const [currentStatus, setCurrentStatus] = useState(existingData?.status || status)
+  const [notes, setNotes] = useState(existingData?.notes || '')
+  const [estimatedHours, setEstimatedHours] = useState(existingData?.estimatedHours?.toString() || '')
   const [mediaFiles, setMediaFiles] = useState<File[]>([])
   const [mediaPreviews, setMediaPreviews] = useState<string[]>([])
+  const [existingMedia, setExistingMedia] = useState(existingData?.media || [])
+  const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([])
   const photoInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const uploadPhotoRef = useRef<HTMLInputElement>(null)
@@ -56,12 +69,18 @@ export default function CheckpointModal({
     setMediaPreviews(prev => prev.filter((_, i) => i !== index))
   }
 
+  const removeExistingMedia = (mediaId: string) => {
+    setExistingMedia(prev => prev.filter(m => m.id !== mediaId))
+    setRemovedMediaIds(prev => [...prev, mediaId])
+  }
+
   const handleSubmit = () => {
     const data = {
-      status,
+      status: currentStatus,
       notes,
       estimatedHours: estimatedHours ? parseFloat(estimatedHours) : undefined,
-      media: mediaFiles
+      media: mediaFiles,
+      removedMediaIds: removedMediaIds.length > 0 ? removedMediaIds : undefined
     }
     onSubmit(data)
     
@@ -70,6 +89,8 @@ export default function CheckpointModal({
     setEstimatedHours('')
     setMediaFiles([])
     setMediaPreviews([])
+    setExistingMedia([])
+    setRemovedMediaIds([])
   }
 
   return (
@@ -77,10 +98,66 @@ export default function CheckpointModal({
       <div className="modal-content p-5">
         <div className="mb-5">
           <h2 className="text-xl font-semibold mb-2">
-            {status === 'CORRECTED' ? 'Mark as Corrected' : 'Action Required'}
+            {isEditMode ? 'Edit Checkpoint' : 
+             currentStatus === 'CORRECTED' ? 'Mark as Corrected' : 
+             currentStatus === 'ACTION_REQUIRED' ? 'Action Required' :
+             currentStatus === 'PASS' ? 'Mark as Passed' : 'Mark as N/A'}
           </h2>
           <p className="text-sm text-gray-500">{checkpointName}</p>
         </div>
+
+        {/* Status selector for edit mode */}
+        {isEditMode && (
+          <div className="mb-5">
+            <label className="block text-sm font-semibold mb-2">Status</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentStatus('PASS')}
+                className={`py-3 px-4 rounded-lg font-semibold transition-all ${
+                  currentStatus === 'PASS' 
+                    ? 'bg-green-500 text-white border-2 border-green-600' 
+                    : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                PASS
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentStatus('CORRECTED')}
+                className={`py-3 px-4 rounded-lg font-semibold transition-all ${
+                  currentStatus === 'CORRECTED' 
+                    ? 'bg-yellow-500 text-white border-2 border-yellow-600' 
+                    : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                CORRECTED
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentStatus('ACTION_REQUIRED')}
+                className={`py-3 px-4 rounded-lg font-semibold transition-all ${
+                  currentStatus === 'ACTION_REQUIRED' 
+                    ? 'bg-red-500 text-white border-2 border-red-600' 
+                    : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                ACTION
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentStatus('NOT_APPLICABLE')}
+                className={`py-3 px-4 rounded-lg font-semibold transition-all ${
+                  currentStatus === 'NOT_APPLICABLE' 
+                    ? 'bg-gray-500 text-white border-2 border-gray-600' 
+                    : 'bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                N/A
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Media capture buttons */}
         <div className="mb-5">
@@ -154,11 +231,46 @@ export default function CheckpointModal({
             onChange={(e) => handleMediaCapture(e.target.files, 'video')}
           />
 
-          {/* Media previews */}
+          {/* Existing media - only in edit mode */}
+          {isEditMode && existingMedia.length > 0 && (
+            <div className="mt-3 pb-2">
+              <p className="text-xs text-gray-600 mb-2">Existing media:</p>
+              <div className="flex gap-3 overflow-x-auto pb-2 pt-2">
+                {existingMedia.map((media) => (
+                  <div key={media.id} className="relative flex-shrink-0 mr-2">
+                    {media.type === 'video' ? (
+                      <div className="w-20 h-20 bg-blue-500 rounded-lg flex items-center justify-center text-white">
+                        <Icons.video className="w-8 h-8" />
+                      </div>
+                    ) : (
+                      <Image
+                        src={`/api/media/${media.id}`}
+                        alt="Existing media"
+                        width={80}
+                        height={80}
+                        className="w-20 h-20 object-cover rounded-lg border-2 border-gray-300"
+                      />
+                    )}
+                    <button
+                      onClick={() => removeExistingMedia(media.id)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center hover:bg-red-600 z-10"
+                      title="Remove media"
+                    >
+                      <Icons.close className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* New media previews */}
           {mediaPreviews.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto mt-3">
+            <div className="mt-3 pb-2">
+              {isEditMode && <p className="text-xs text-gray-600 mb-2">New media:</p>}
+              <div className="flex gap-3 overflow-x-auto pb-2 pt-2">
               {mediaPreviews.map((preview, index) => (
-                <div key={index} className="relative flex-shrink-0">
+                <div key={index} className="relative flex-shrink-0 mr-2">
                   {mediaFiles[index].type.startsWith('video') ? (
                     <video
                       src={preview}
@@ -175,34 +287,37 @@ export default function CheckpointModal({
                   )}
                   <button
                     onClick={() => removeMedia(index)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center hover:bg-red-600"
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center hover:bg-red-600 z-10"
                   >
                     <Icons.close className="w-3 h-3" />
                   </button>
                 </div>
               ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Notes field */}
+        {/* Notes field - show for CORRECTED and ACTION_REQUIRED */}
+        {(currentStatus === 'CORRECTED' || currentStatus === 'ACTION_REQUIRED') && (
         <div className="mb-5">
           <label className="block text-sm font-semibold mb-2">
-            {status === 'CORRECTED' ? 'What was corrected?' : 'What needs to be done?'}
+            {currentStatus === 'CORRECTED' ? 'What was corrected?' : 'What needs to be done?'}
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={4}
             className="form-textarea"
-            placeholder={status === 'CORRECTED' 
+            placeholder={currentStatus === 'CORRECTED' 
               ? 'Describe what was corrected...' 
               : 'Describe the problem and solution needed...'}
           />
         </div>
+        )}
 
         {/* Hours estimate (Action Required only) */}
-        {status === 'ACTION_REQUIRED' && (
+        {currentStatus === 'ACTION_REQUIRED' && (
           <div className="mb-5">
             <label className="block text-sm font-semibold mb-2">
               Estimated Hours to Fix
@@ -229,8 +344,8 @@ export default function CheckpointModal({
           </button>
           <button
             onClick={handleSubmit}
-            className={`btn ${status === 'CORRECTED' ? 'btn-warning' : 'btn-danger'} flex-1`}
-            disabled={!notes.trim()}
+            className={`btn ${currentStatus === 'PASS' ? 'btn-success' : currentStatus === 'CORRECTED' ? 'btn-warning' : currentStatus === 'ACTION_REQUIRED' ? 'btn-danger' : 'btn-secondary'} flex-1`}
+            disabled={(currentStatus === 'CORRECTED' || currentStatus === 'ACTION_REQUIRED') && !notes.trim()}
           >
             Submit
           </button>
