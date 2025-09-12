@@ -84,6 +84,29 @@ jobs:
     if: (github.ref == 'refs/heads/main') && github.event_name == 'push'
     
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Create deployment package
+      run: |
+        # Create a tar package excluding unnecessary files
+        tar -czf deployment.tar.gz \
+          --exclude='.git' \
+          --exclude='node_modules' \
+          --exclude='.next' \
+          --exclude='coverage' \
+          --exclude='*.log' \
+          .
+          
+    - name: Upload deployment package to Production EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.PROD_EC2_HOST }}
+        username: ${{ secrets.PROD_EC2_USER }}
+        key: ${{ secrets.PROD_EC2_SSH_KEY }}
+        source: "deployment.tar.gz"
+        target: "/tmp/"
+        
     - name: Deploy to Production EC2
       uses: appleboy/ssh-action@v1.0.0
       with:
@@ -94,20 +117,7 @@ jobs:
         command_timeout: 60m
         sync: true
         script: |
-          # Set up SSH key for GitHub access
-          mkdir -p ~/.ssh
-          cat << 'EOF' > ~/.ssh/deploy_key
-          ${{ secrets.PROD_DEPLOY_SSH_KEY }}
-          EOF
-          chmod 600 ~/.ssh/deploy_key
-          
-          # Add GitHub to known hosts
-          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
-          
-          # Configure Git to use the deployment key
-          export GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no"
-          
-          # Clean up and clone repository
+          # Setup deployment from uploaded package
           APP_DIR="/home/ubuntu/technical-inspection-platform-prod"
           ENV_BACKUP="/tmp/.env.backup"
           
@@ -117,36 +127,21 @@ jobs:
             cp "$APP_DIR/.env" "$ENV_BACKUP"
           fi
           
-          # If directory exists but is not a proper git repo, remove it
-          if [ -d "$APP_DIR" ]; then
-            cd "$APP_DIR"
-            if ! git status >/dev/null 2>&1; then
-              echo "🧹 Removing corrupted directory..."
-              cd /home/ubuntu
-              rm -rf technical-inspection-platform-prod
-            fi
-          fi
+          # Clean up old deployment and create fresh directory
+          echo "🧹 Cleaning up old deployment..."
+          rm -rf "$APP_DIR"
+          mkdir -p "$APP_DIR"
           
-          # Clone or update repository
-          if [ ! -d "$APP_DIR" ]; then
-            echo "📥 Cloning repository..."
-            cd /home/ubuntu
-            git clone git@github.com:${{ github.repository }}.git technical-inspection-platform-prod
-            cd technical-inspection-platform-prod
-            git checkout main
-            
-            # Restore .env file if we had a backup
-            if [ -f "$ENV_BACKUP" ]; then
-              echo "📁 Restoring .env file..."
-              cp "$ENV_BACKUP" .env
-              rm "$ENV_BACKUP"
-            fi
-          else
-            echo "📁 Updating existing repository..."
-            cd "$APP_DIR"
-            git fetch --all
-            git checkout main
-            git pull origin main
+          # Extract new deployment
+          echo "📦 Extracting deployment package..."
+          cd "$APP_DIR"
+          tar -xzf /tmp/deployment.tar.gz
+          
+          # Restore .env file if we had a backup
+          if [ -f "$ENV_BACKUP" ]; then
+            echo "📁 Restoring .env file..."
+            cp "$ENV_BACKUP" .env
+            rm "$ENV_BACKUP"
           fi
           
           # Verify we're in the right directory and files exist
