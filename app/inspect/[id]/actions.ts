@@ -75,6 +75,8 @@ export async function stopInspection(inspectionId: string) {
 
 export async function completeInspection(inspectionId: string) {
   try {
+    console.log('Completing inspection:', inspectionId)
+    
     // First, get the inspection with all checkpoints
     const inspection = await prisma.inspection.findUnique({
       where: { id: inspectionId },
@@ -89,8 +91,11 @@ export async function completeInspection(inspectionId: string) {
     })
 
     if (!inspection) {
+      console.error('Inspection not found:', inspectionId)
       throw new Error('Inspection not found')
     }
+    
+    console.log('Found inspection, status:', inspection.status)
 
     // Flatten all checkpoints
     const allCheckpoints = inspection.sections.flatMap(section => section.checkpoints)
@@ -107,8 +112,10 @@ export async function completeInspection(inspectionId: string) {
       equipmentStatus = EquipmentStatus.MAINTENANCE
     }
 
+    console.log('Updating to equipment status:', equipmentStatus)
+    
     // Use a transaction to ensure both updates succeed or fail together
-    await prisma.$transaction([
+    const [updatedInspection, updatedEquipment] = await prisma.$transaction([
       // Update inspection status
       prisma.inspection.update({
         where: { id: inspectionId },
@@ -123,6 +130,9 @@ export async function completeInspection(inspectionId: string) {
         data: { status: equipmentStatus }
       })
     ])
+    
+    console.log('Transaction complete. Inspection status:', updatedInspection.status)
+    console.log('Equipment status:', updatedEquipment.status)
     
     revalidatePath('/', 'layout')
     revalidatePath('/', 'page')

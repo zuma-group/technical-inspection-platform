@@ -85,7 +85,7 @@ export default function SelectTemplateClient({
 
       {templates.length === 0 ? (
         <div className="text-center py-12 card">
-          <Icons.alertCircle className="w-16 h-16 text-amber-400 mx-auto mb-4" />
+          <Icons.alert className="w-16 h-16 text-amber-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">No Templates Available</h2>
           <p className="text-gray-600 mb-6">
             No inspection templates found for {equipment.type.replace(/_/g, ' ').toLowerCase()} equipment.

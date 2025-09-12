@@ -117,12 +117,28 @@ export default function InspectionClient({ inspection }) {
   }
 
   const handleComplete = async () => {
-    if (completedCheckpoints === totalCheckpoints) {
+    if (completedCheckpoints !== totalCheckpoints) {
+      alert(`Please complete all checkpoints (${completedCheckpoints}/${totalCheckpoints})`)
+      return
+    }
+    
+    try {
+      console.log('Completing inspection:', inspection.id)
       const result = await completeInspection(inspection.id)
-      if (result.success) {
-        // Use window.location for a hard refresh to ensure data is refetched
-        window.location.href = '/'
+      console.log('Complete result:', result)
+      
+      if (result?.success) {
+        // Small delay to ensure database transaction completes
+        setTimeout(() => {
+          window.location.href = '/'
+        }, 100)
+      } else {
+        alert('Failed to complete inspection. Please try again.')
       }
+    } catch (error) {
+      // Don't log the full error object to avoid the 431 issue
+      console.error('Error completing inspection')
+      alert('An error occurred while completing the inspection.')
     }
   }
 
