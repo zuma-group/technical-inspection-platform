@@ -13,6 +13,7 @@ export default function EquipmentList({ equipment }: { equipment: any[] }) {
     return (
       item.serial.toLowerCase().includes(search) ||
       item.model.toLowerCase().includes(search) ||
+      (item.taskId && item.taskId.toLowerCase().includes(search)) ||
       (item.inProgressInspection?.taskId && item.inProgressInspection.taskId.toLowerCase().includes(search))
     )
   })
@@ -58,10 +59,10 @@ export default function EquipmentList({ equipment }: { equipment: any[] }) {
                   <p className="text-sm text-gray-600">
                     {item.type.replace('_', ' ')} • {item.serial}
                   </p>
-                  {item.inProgressInspection?.taskId && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      Task ID: {item.inProgressInspection.taskId}
-                    </p>
+                  {item.taskId && (
+                    <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">
+                      Task ID: {item.taskId}
+                    </span>
                   )}
                 </div>
                 <span className={`status-badge ${
@@ -97,37 +98,11 @@ export default function EquipmentList({ equipment }: { equipment: any[] }) {
               </div>
             </div>
             
-            {item.hasInProgressInspection ? (
-              <Link href={`/inspect/${item.id}`} className="no-underline">
-                <button className="btn btn-warning w-full">
-                  Resume Inspection
-                </button>
-              </Link>
-            ) : item.lastCompletedInspection ? (
-              // Show completed status with date and start over button
-              <div className="flex flex-col gap-3">
-                <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded-lg text-center">
-                  <div className="font-semibold flex items-center justify-center gap-2">
-                    <Icons.checkCircle className="w-5 h-5" />
-                    Inspected
-                  </div>
-                  <div className="text-xs mt-1">
-                    {new Date(item.lastCompletedInspection.completedAt || item.lastCompletedInspection.startedAt).toLocaleDateString()}
-                  </div>
-                </div>
-                <Link href={`/inspect/${item.id}/select-template`} className="no-underline block">
-                  <button className="btn btn-primary w-full">
-                    Start Over
-                  </button>
-                </Link>
-              </div>
-            ) : (
-              <Link href={`/inspect/${item.id}/select-template`} className="no-underline">
-                <button className="btn btn-primary w-full">
-                  Start Inspection
-                </button>
-              </Link>
-            )}
+            <Link href={`/equipment/${item.id}`} className="no-underline">
+              <button className="btn btn-primary w-full">
+                View Details
+              </button>
+            </Link>
           </div>
         ))}
         
