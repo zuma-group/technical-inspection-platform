@@ -136,188 +136,114 @@ export default function EditTemplatePage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <div className="container template-editor">
-      <div className="page-header">
-        <div style={{ marginBottom: '24px' }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-8">
+        <div className="mb-6">
           <Link href="/templates">
-            <button className="btn btn-secondary" style={{ padding: '8px 16px' }}>
+            <button className="btn btn-secondary">
               ← Back to Templates
             </button>
           </Link>
         </div>
-        <h1 className="page-title">Edit Template</h1>
-        <p className="page-subtitle">Modify inspection checkpoints</p>
+        <h1 className="text-3xl font-bold text-gray-900">Edit Template</h1>
+        <p className="text-gray-600 mt-1">Modify inspection checkpoints</p>
       </div>
 
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Template Details</h2>
+      <div className="card mb-6">
+        <h2 className="text-lg font-semibold mb-4">Template Details</h2>
         
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            Template Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px'
-            }}
-          />
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Template Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="form-input"
+            />
+          </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            Description
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px',
-              resize: 'vertical'
-            }}
-          />
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Equipment Type
+            </label>
+            <select
+              value={equipmentType}
+              onChange={(e) => setEquipmentType(e.target.value)}
+              className="form-select"
+            >
+              <option value="BOOM_LIFT">Boom Lift</option>
+              <option value="SCISSOR_LIFT">Scissor Lift</option>
+              <option value="TELEHANDLER">Telehandler</option>
+              <option value="FORKLIFT">Forklift</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            Equipment Type
-          </label>
-          <select
-            value={equipmentType}
-            onChange={(e) => setEquipmentType(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              fontSize: '16px',
-              background: 'white'
-            }}
-          >
-            <option value="BOOM_LIFT">Boom Lift</option>
-            <option value="SCISSOR_LIFT">Scissor Lift</option>
-            <option value="TELEHANDLER">Telehandler</option>
-            <option value="FORKLIFT">Forklift</option>
-            <option value="OTHER">Other</option>
-          </select>
+          <div className="lg:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              className="form-textarea"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Sections & Checkpoints</h2>
-          <button onClick={handleAddSection} className="btn btn-primary" style={{ padding: '8px 16px' }}>
+      <div className="card mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Sections & Checkpoints</h2>
+          <button onClick={handleAddSection} className="btn btn-primary">
             + Add Section
           </button>
         </div>
 
         {sections.map((section) => (
-          <div key={section.id} style={{ 
-            background: '#F9FAFB', 
-            borderRadius: '8px', 
-            padding: '16px',
-            marginBottom: '16px'
-          }}>
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-              <input
-                type="text"
-                value={section.code}
-                onChange={(e) => handleUpdateSection(section.id, 'code', e.target.value)}
-                onBlur={(e) => handleUpdateSection(section.id, 'code', e.target.value)}
-                style={{
-                  width: '100px',
-                  padding: '8px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '6px',
-                  fontSize: '14px'
-                }}
-              />
+          <div key={section.id} className="bg-teal-50 rounded-lg p-4 mb-4 border-2 border-teal-300">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 mb-3">
               <input
                 type="text"
                 value={section.name}
                 onChange={(e) => handleUpdateSection(section.id, 'name', e.target.value)}
                 onBlur={(e) => handleUpdateSection(section.id, 'name', e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '8px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '6px',
-                  fontSize: '14px'
-                }}
+                className="px-3 py-2 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500"
               />
               <button
                 onClick={() => handleDeleteSection(section.id)}
                 className="btn btn-danger"
-                style={{ padding: '8px 12px' }}
               >
                 Delete
               </button>
             </div>
 
-            <div style={{ marginLeft: '20px' }}>
+            <div className="ml-5">
               {section.checkpoints.map((checkpoint: any) => (
-                <div key={checkpoint.id} style={{ 
-                  display: 'flex', 
-                  gap: '8px', 
-                  alignItems: 'center',
-                  marginBottom: '8px' 
-                }}>
-                  <input
-                    type="text"
-                    value={checkpoint.code}
-                    onChange={(e) => handleUpdateCheckpoint(section.id, checkpoint.id, 'code', e.target.value)}
-                    onBlur={(e) => handleUpdateCheckpoint(section.id, checkpoint.id, 'code', e.target.value)}
-                    style={{
-                      width: '80px',
-                      padding: '6px',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '4px',
-                      fontSize: '13px'
-                    }}
-                  />
+                <div key={checkpoint.id} className="grid grid-cols-1 lg:grid-cols-[1fr_120px_auto] gap-2 items-center mb-2">
                   <input
                     type="text"
                     value={checkpoint.name}
                     onChange={(e) => handleUpdateCheckpoint(section.id, checkpoint.id, 'name', e.target.value)}
                     onBlur={(e) => handleUpdateCheckpoint(section.id, checkpoint.id, 'name', e.target.value)}
-                    style={{
-                      flex: 1,
-                      padding: '6px',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '4px',
-                      fontSize: '13px'
-                    }}
+                    className="px-2 py-1.5 border-2 border-gray-400 rounded text-sm focus:outline-none focus:border-blue-500"
                   />
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <label className="flex items-center gap-1">
                     <input
                       type="checkbox"
                       checked={checkpoint.critical}
                       onChange={(e) => handleUpdateCheckpoint(section.id, checkpoint.id, 'critical', e.target.checked)}
+                      className="w-4 h-4"
                     />
-                    <span style={{ fontSize: '13px' }}>Critical</span>
+                    <span className="text-sm">Critical</span>
                   </label>
                   <button
                     onClick={() => handleDeleteCheckpoint(section.id, checkpoint.id)}
-                    style={{
-                      padding: '4px 8px',
-                      background: '#EF4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
+                    className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
                   >
                     ✕
                   </button>
@@ -325,8 +251,7 @@ export default function EditTemplatePage({ params }: { params: Promise<{ id: str
               ))}
               <button
                 onClick={() => handleAddCheckpoint(section.id)}
-                className="btn btn-secondary"
-                style={{ padding: '6px 12px', fontSize: '13px', marginTop: '8px' }}
+                className="btn btn-secondary mt-2 text-sm"
               >
                 + Add Checkpoint
               </button>

@@ -32,6 +32,7 @@ enum CheckpointStatus {
   PASS
   CORRECTED
   ACTION_REQUIRED
+  NOT_APPLICABLE
 }
 
 enum UserRole {
@@ -65,6 +66,8 @@ model Inspection {
   status       InspectionStatus @default(IN_PROGRESS)
   sections     Section[]
   templateId   String?
+  taskId       String?
+  serialNumber String?
   startedAt    DateTime     @default(now())
   completedAt  DateTime?
   updatedAt    DateTime     @updatedAt
@@ -72,6 +75,7 @@ model Inspection {
   @@index([equipmentId])
   @@index([status])
   @@index([startedAt])
+  @@index([taskId])
 }
 
 model Section {

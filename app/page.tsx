@@ -1,33 +1,64 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { InspectionStatus } from '@prisma/client'
+import { Icons, iconSizes } from '@/lib/icons'
+import EquipmentList from './equipment-list'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 async function getEquipment() {
   try {
     const equipment = await prisma.equipment.findMany({
       orderBy: { createdAt: 'desc' },
-      include: {
-        inspections: {
+    })
+    
+    // For each equipment, get both in-progress and last completed inspection
+    const equipmentWithInspections = await Promise.all(
+      equipment.map(async (eq) => {
+        const inProgressInspection = await prisma.inspection.findFirst({
           where: {
+            equipmentId: eq.id,
             status: InspectionStatus.IN_PROGRESS
           },
-          take: 1,
           select: {
             id: true,
             status: true,
-            startedAt: true
+            startedAt: true,
+            taskId: true,
+            serialNumber: true
           }
-        },
-      },
-    })
+        })
+        
+        console.log(`Equipment ${eq.model} (${eq.id}):`, {
+          hasInProgress: !!inProgressInspection,
+          inProgressId: inProgressInspection?.id
+        })
+        
+        const lastInspection = await prisma.inspection.findFirst({
+          where: {
+            equipmentId: eq.id,
+            status: InspectionStatus.COMPLETED
+          },
+          orderBy: { completedAt: 'desc' },
+          select: {
+            id: true,
+            status: true,
+            startedAt: true,
+            completedAt: true
+          }
+        })
+        
+        return {
+          ...eq,
+          hasInProgressInspection: !!inProgressInspection,
+          inProgressInspection,
+          lastCompletedInspection: lastInspection
+        }
+      })
+    )
     
-    // Add a flag to indicate if there's an in-progress inspection
-    return equipment.map(eq => ({
-      ...eq,
-      hasInProgressInspection: eq.inspections.length > 0
-    }))
+    return equipmentWithInspections
   } catch (error) {
     console.error('Failed to fetch equipment:', error)
     return []
@@ -39,52 +70,43 @@ export default async function HomePage() {
 
   if (!equipment || equipment.length === 0) {
     return (
-      <div className="container">
-        <div className="page-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
-              <h1 className="page-title">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Equipment Inspection Platform
               </h1>
-              <p className="page-subtitle">
-                No equipment found. Add equipment to begin.
+              <p className="text-gray-600">
+                Track and inspect your construction equipment
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div className="flex gap-3">
               <Link href="/dashboard">
-                <button className="btn btn-primary">
-                  📊 Dashboard
+                <button className="btn btn-primary inline-flex items-center gap-2">
+                  <Icons.dashboard className={iconSizes.sm} />
+                  <span>Dashboard</span>
                 </button>
               </Link>
-              <Link href="/templates">
-                <button className="btn btn-secondary">
-                  ⚙️ Templates
+              <Link href="/equipment/new">
+                <button className="btn btn-secondary inline-flex items-center gap-2">
+                  <Icons.add className={iconSizes.sm} />
+                  <span>Add Equipment</span>
                 </button>
               </Link>
             </div>
           </div>
         </div>
         
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '48px' }}>
-          <Link href="/equipment/new" style={{ textDecoration: 'none' }}>
-            <div className="card" style={{ 
-              display: 'flex', 
-              flexDirection: 'column',
-              alignItems: 'center', 
-              justifyContent: 'center',
-              minHeight: '240px',
-              cursor: 'pointer',
-              border: '2px dashed #D1D5DB',
-              transition: 'all 0.2s',
-              padding: '32px',
-              maxWidth: '400px'
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>➕</div>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Add Equipment</h3>
-              <p style={{ color: '#6B7280', textAlign: 'center' }}>
-                Register new equipment to start inspections
-              </p>
-            </div>
+        <div className="card text-center py-10">
+          <Icons.settings className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">No Equipment Found</h2>
+          <p className="text-gray-500 mb-5">Get started by adding your first equipment</p>
+          <Link href="/equipment/new">
+            <button className="btn btn-primary inline-flex items-center gap-2">
+              <Icons.add className={iconSizes.sm} />
+              <span>Add Equipment</span>
+            </button>
           </Link>
         </div>
       </div>
@@ -92,114 +114,35 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="container">
-      <div className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '16px' }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
-            <h1 className="page-title">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Equipment Inspection Platform
             </h1>
-            <p className="page-subtitle">
+            <p className="text-gray-600">
               Select equipment to begin inspection
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div className="flex gap-3 flex-wrap">
             <Link href="/dashboard">
-              <button className="btn btn-primary">
-                📊 Dashboard
+              <button className="btn btn-primary inline-flex items-center gap-2">
+                <Icons.dashboard className={iconSizes.sm} />
+                <span>Dashboard</span>
               </button>
             </Link>
             <Link href="/templates">
-              <button className="btn btn-secondary">
-                ⚙️ Templates
+              <button className="btn btn-secondary inline-flex items-center gap-2">
+                <Icons.settings className={iconSizes.sm} />
+                <span>Templates</span>
               </button>
             </Link>
           </div>
         </div>
       </div>
       
-      <div className="equipment-grid">
-        {equipment.map(item => (
-          <div key={item.id} className="card" style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            height: '100%'
-          }}>
-            <div style={{ flex: 1, marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                <div style={{ flex: 1 }}>
-                  <h2 className="equipment-title">
-                    {item.model}
-                  </h2>
-                  <p className="equipment-subtitle">
-                    {item.type.replace('_', ' ')} • {item.serial}
-                  </p>
-                </div>
-                <span className={`status-badge status-${item.status.toLowerCase().replace('_', '-')}`}>
-                  {item.status.replace('_', ' ')}
-                </span>
-              </div>
-              
-              <div className="equipment-details">
-                <div className="equipment-detail-item">
-                  <span className="equipment-icon">📍</span>
-                  <span>{item.location}</span>
-                </div>
-                <div className="equipment-detail-item">
-                  <span className="equipment-icon">⏱️</span>
-                  <span>{item.hoursUsed} hours</span>
-                </div>
-                {item.hasInProgressInspection ? (
-                  <div className="equipment-detail-item" style={{ color: '#F59E0B' }}>
-                    <span className="equipment-icon">⚠️</span>
-                    <span style={{ fontWeight: '600' }}>Inspection in progress</span>
-                  </div>
-                ) : item.inspections && item.inspections[0] && (
-                  <div className="equipment-detail-item">
-                    <span className="equipment-icon">✓</span>
-                    <span>Last: {new Date(item.inspections[0].startedAt).toLocaleDateString()}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {item.hasInProgressInspection ? (
-              <Link href={`/inspect/${item.id}`} style={{ textDecoration: 'none' }}>
-                <button className="btn btn-warning" style={{ width: '100%' }}>
-                  Resume Inspection
-                </button>
-              </Link>
-            ) : (
-              <Link href={`/inspect/${item.id}/select-template`} style={{ textDecoration: 'none' }}>
-                <button className="btn btn-primary" style={{ width: '100%' }}>
-                  Start Inspection
-                </button>
-              </Link>
-            )}
-          </div>
-        ))}
-        
-        {/* Add Equipment Card */}
-        <Link href="/equipment/new" style={{ textDecoration: 'none' }}>
-          <div className="card" style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center', 
-            justifyContent: 'center',
-            minHeight: '240px',
-            cursor: 'pointer',
-            border: '2px dashed #D1D5DB',
-            transition: 'all 0.2s',
-            height: '100%'
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>➕</div>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Add Equipment</h3>
-            <p style={{ color: '#6B7280', textAlign: 'center' }}>
-              Register new equipment
-            </p>
-          </div>
-        </Link>
-      </div>
+      <EquipmentList equipment={equipment} />
     </div>
   )
 }

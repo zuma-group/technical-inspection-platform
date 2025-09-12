@@ -57,3 +57,35 @@ export async function GET(
     )
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: mediaId } = await params
+
+    if (!mediaId) {
+      return NextResponse.json(
+        { error: 'Media ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Delete media from database
+    await prisma.media.delete({
+      where: { id: mediaId }
+    })
+
+    return NextResponse.json(
+      { success: true, message: 'Media deleted successfully' },
+      { status: 200 }
+    )
+  } catch (error) {
+    console.error('Media delete error:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete media' },
+      { status: 500 }
+    )
+  }
+}

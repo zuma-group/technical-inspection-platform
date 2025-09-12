@@ -39,12 +39,29 @@ export async function updateCheckpoint(
 
 export async function stopInspection(inspectionId: string) {
   try {
+    console.log('Stopping inspection:', inspectionId)
+    
+    // First check if inspection exists
+    const inspection = await prisma.inspection.findUnique({
+      where: { id: inspectionId }
+    })
+    
+    if (!inspection) {
+      console.error('Inspection not found:', inspectionId)
+      return { success: false, error: 'Inspection not found' }
+    }
+    
+    console.log('Found inspection, deleting...', inspection)
+    
     // Delete the inspection and all related data (cascading delete will handle sections, checkpoints, media)
     await prisma.inspection.delete({
       where: { id: inspectionId }
     })
     
-    revalidatePath('/')
+    console.log('Inspection deleted successfully')
+    
+    revalidatePath('/', 'layout')
+    revalidatePath('/', 'page')
     revalidatePath('/inspect/[id]', 'page')
     return { success: true }
   } catch (error) {
@@ -58,6 +75,8 @@ export async function stopInspection(inspectionId: string) {
 
 export async function completeInspection(inspectionId: string) {
   try {
+    console.log('Completing inspection:', inspectionId)
+    
     // First, get the inspection with all checkpoints
     const inspection = await prisma.inspection.findUnique({
       where: { id: inspectionId },
@@ -72,8 +91,11 @@ export async function completeInspection(inspectionId: string) {
     })
 
     if (!inspection) {
+      console.error('Inspection not found:', inspectionId)
       throw new Error('Inspection not found')
     }
+    
+    console.log('Found inspection, status:', inspection.status)
 
     // Flatten all checkpoints
     const allCheckpoints = inspection.sections.flatMap(section => section.checkpoints)
@@ -90,8 +112,10 @@ export async function completeInspection(inspectionId: string) {
       equipmentStatus = EquipmentStatus.MAINTENANCE
     }
 
+    console.log('Updating to equipment status:', equipmentStatus)
+    
     // Use a transaction to ensure both updates succeed or fail together
-    await prisma.$transaction([
+    const [updatedInspection, updatedEquipment] = await prisma.$transaction([
       // Update inspection status
       prisma.inspection.update({
         where: { id: inspectionId },
@@ -107,7 +131,11 @@ export async function completeInspection(inspectionId: string) {
       })
     ])
     
-    revalidatePath('/')
+    console.log('Transaction complete. Inspection status:', updatedInspection.status)
+    console.log('Equipment status:', updatedEquipment.status)
+    
+    revalidatePath('/', 'layout')
+    revalidatePath('/', 'page')
     revalidatePath('/dashboard')
     return { success: true, equipmentStatus }
   } catch (error) {
@@ -119,7 +147,13 @@ export async function completeInspection(inspectionId: string) {
   }
 }
 
-export async function createInspection(equipmentId: string, technicianId: string, templateId?: string) {
+export async function createInspection(
+  equipmentId: string, 
+  technicianId: string, 
+  templateId?: string,
+  taskId?: string,
+  serialNumber?: string
+) {
   try {
     // Check if there's already an in-progress inspection
     const existingInspection = await prisma.inspection.findFirst({
@@ -179,6 +213,8 @@ export async function createInspection(equipmentId: string, technicianId: string
         equipmentId,
         technicianId,
         templateId: template.id,
+        taskId: taskId || null,
+        serialNumber: serialNumber || null,
         status: InspectionStatus.IN_PROGRESS,
         sections: {
           create: template.sections.map(section => ({
