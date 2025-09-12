@@ -211,7 +211,7 @@ export default async function DashboardPage() {
                           <span className={`status-badge ${
                             inspection.status === 'COMPLETED' ? 'status-operational' : 'status-inspection'
                           }`}>
-                            {inspection.status}
+                            {inspection.status.replace('_', ' ')}
                           </span>
                         </td>
                         <td style={{ padding: '12px' }}>
