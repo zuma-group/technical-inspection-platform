@@ -100,27 +100,27 @@ jobs:
           -C "$GITHUB_WORKSPACE" .
         mv "$TMP_TAR" "$GITHUB_WORKSPACE/deployment.tar.gz"
           
-    - name: Upload deployment package to Production EC2
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.PROD_EC2_HOST }}
-        username: ${{ secrets.PROD_EC2_USER }}
-        key: ${{ secrets.PROD_EC2_SSH_KEY }}
-        source: "deployment.tar.gz"
-        target: "/tmp/"
-        
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.PROD_EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.PROD_EC2_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Copy deployment package to server
+      run: |
+        PORT_OPT=""
+        if [ -n "${{ secrets.PROD_EC2_SSH_PORT }}" ]; then PORT_OPT="-P ${{ secrets.PROD_EC2_SSH_PORT }}"; fi
+        scp $PORT_OPT deployment.tar.gz ${{ secrets.PROD_EC2_USER }}@${{ secrets.PROD_EC2_HOST }}:/tmp/deployment.tar.gz
+
     - name: Deploy to Production EC2
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.PROD_EC2_HOST }}
-        username: ${{ secrets.PROD_EC2_USER }}
-        key: ${{ secrets.PROD_EC2_SSH_KEY }}
-        timeout: 300s
-        command_timeout: 60m
-        sync: true
-        script: |
+      run: |
+        PORT_OPT=""
+        if [ -n "${{ secrets.PROD_EC2_SSH_PORT }}" ]; then PORT_OPT="-p ${{ secrets.PROD_EC2_SSH_PORT }}"; fi
+        ssh $PORT_OPT ${{ secrets.PROD_EC2_USER }}@${{ secrets.PROD_EC2_HOST }} << 'EOF'
+          set -euo pipefail
           # Setup deployment from uploaded package
-          APP_DIR="/home/ubuntu/technical-inspection-platform-prod"
+          APP_DIR="$HOME/technical-inspection-platform-prod"
           ENV_BACKUP="/tmp/.env.backup"
           
           # Backup .env file if it exists
@@ -172,7 +172,7 @@ jobs:
           
           # Check for port conflicts (using port 3002 for production)
           echo "🔍 Checking for port conflicts..."
-          USED_PORTS=$(docker ps --format '{{.Ports}}' | grep -oP '\d+(?=->)' | sort -n | uniq || echo "")
+          USED_PORTS=$(docker ps --format '{{.Ports}}' | grep -oP '\\d+(?=->)' | sort -n | uniq || echo "")
           if echo "$USED_PORTS" | grep -q "3002"; then
            echo "❌ Port 3002 is already in use!"
            echo "Used ports: $USED_PORTS"
@@ -213,9 +213,6 @@ jobs:
           
           docker compose -f docker-compose.postgres.yml up -d
           
-          # Clean up SSH key
-          rm -f ~/.ssh/deploy_key
-          
           # Wait for containers to start
           echo "⏳ Waiting for containers to start..."
           sleep 10
@@ -248,6 +245,7 @@ jobs:
             docker compose -f docker-compose.postgres.yml logs
             exit 1
           fi
+        EOF
 
   notify:
     needs: [test, deploy]
