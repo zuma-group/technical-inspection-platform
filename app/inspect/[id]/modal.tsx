@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { Icons, iconSizes } from '@/lib/icons'
+import Lightbox from './lightbox'
 
 interface ModalProps {
   isOpen: boolean
@@ -41,6 +42,11 @@ export default function CheckpointModal({
   const [mediaPreviews, setMediaPreviews] = useState<string[]>([])
   const [existingMedia, setExistingMedia] = useState(existingData?.media || [])
   const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([])
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean
+    media: Array<{ id: string; type: string }>
+    initialIndex: number
+  }>({ isOpen: false, media: [], initialIndex: 0 })
   const photoInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const uploadPhotoRef = useRef<HTMLInputElement>(null)
@@ -236,21 +242,31 @@ export default function CheckpointModal({
             <div className="mt-3 pb-2">
               <p className="text-xs text-gray-600 mb-2">Existing media:</p>
               <div className="flex gap-3 overflow-x-auto pb-2 pt-2">
-                {existingMedia.map((media) => (
+                {existingMedia.map((media, index) => (
                   <div key={media.id} className="relative flex-shrink-0 mr-2">
-                    {media.type === 'video' ? (
-                      <div className="w-20 h-20 bg-blue-500 rounded-lg flex items-center justify-center text-white">
-                        <Icons.video className="w-8 h-8" />
-                      </div>
-                    ) : (
-                      <Image
-                        src={`/api/media/${media.id}`}
-                        alt="Existing media"
-                        width={80}
-                        height={80}
-                        className="w-20 h-20 object-cover rounded-lg border-2 border-gray-300"
-                      />
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setLightbox({
+                        isOpen: true,
+                        media: existingMedia,
+                        initialIndex: index
+                      })}
+                      className="block cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                      {media.type === 'video' ? (
+                        <div className="w-20 h-20 bg-blue-500 rounded-lg flex items-center justify-center text-white">
+                          <Icons.video className="w-8 h-8" />
+                        </div>
+                      ) : (
+                        <Image
+                          src={`/api/media/${media.id}`}
+                          alt="Existing media"
+                          width={80}
+                          height={80}
+                          className="w-20 h-20 object-cover rounded-lg border-2 border-gray-300"
+                        />
+                      )}
+                    </button>
                     <button
                       onClick={() => removeExistingMedia(media.id)}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center hover:bg-red-600 z-10"
@@ -271,20 +287,38 @@ export default function CheckpointModal({
               <div className="flex gap-3 overflow-x-auto pb-2 pt-2">
               {mediaPreviews.map((preview, index) => (
                 <div key={index} className="relative flex-shrink-0 mr-2">
-                  {mediaFiles[index].type.startsWith('video') ? (
-                    <video
-                      src={preview}
-                      className="w-20 h-20 object-cover rounded-lg"
-                    />
-                  ) : (
-                    <Image
-                      src={preview}
-                      alt="Preview"
-                      width={80}
-                      height={80}
-                      className="object-cover rounded-lg"
-                    />
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // For new media, create a temporary viewer using data URLs
+                      const tempMedia = mediaPreviews.map((p, i) => ({
+                        id: `preview-${i}`,
+                        type: mediaFiles[i].type.startsWith('video') ? 'video' : 'image',
+                        dataUrl: p
+                      }))
+                      setLightbox({
+                        isOpen: true,
+                        media: tempMedia as any,
+                        initialIndex: index
+                      })
+                    }}
+                    className="block cursor-pointer hover:opacity-80 transition-opacity"
+                  >
+                    {mediaFiles[index].type.startsWith('video') ? (
+                      <video
+                        src={preview}
+                        className="w-20 h-20 object-cover rounded-lg pointer-events-none"
+                      />
+                    ) : (
+                      <Image
+                        src={preview}
+                        alt="Preview"
+                        width={80}
+                        height={80}
+                        className="object-cover rounded-lg pointer-events-none"
+                      />
+                    )}
+                  </button>
                   <button
                     onClick={() => removeMedia(index)}
                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center hover:bg-red-600 z-10"
@@ -351,6 +385,14 @@ export default function CheckpointModal({
           </button>
         </div>
       </div>
+
+      {/* Lightbox */}
+      <Lightbox
+        isOpen={lightbox.isOpen}
+        onClose={() => setLightbox({ isOpen: false, media: [], initialIndex: 0 })}
+        media={lightbox.media}
+        initialIndex={lightbox.initialIndex}
+      />
     </div>
   )
 }

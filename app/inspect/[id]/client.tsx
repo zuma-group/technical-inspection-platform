@@ -5,12 +5,18 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { updateCheckpoint, completeInspection, stopInspection } from './actions'
 import CheckpointModal from './modal'
+import Lightbox from './lightbox'
 import { Icons, iconSizes } from '@/lib/icons'
 
 export default function InspectionClient({ inspection }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [currentSection, setCurrentSection] = useState(0)
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean
+    media: Array<{ id: string; type: string }>
+    initialIndex: number
+  }>({ isOpen: false, media: [], initialIndex: 0 })
   const [modalState, setModalState] = useState<{
     isOpen: boolean
     checkpointId: string
@@ -446,13 +452,15 @@ export default function InspectionClient({ inspection }) {
                   {/* Show media thumbnails */}
                   {cpData.media && cpData.media.length > 0 && (
                     <div className="mt-3 flex gap-2 overflow-x-auto">
-                      {cpData.media.map((m: { id: string; type: string }) => (
-                        <a 
-                          key={m.id} 
-                          href={`/api/media/${m.id}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex-shrink-0"
+                      {cpData.media.map((m: { id: string; type: string }, index: number) => (
+                        <button
+                          key={m.id}
+                          onClick={() => setLightbox({
+                            isOpen: true,
+                            media: cpData.media,
+                            initialIndex: index
+                          })}
+                          className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                         >
                           {m.type === 'video' ? (
                             <div className="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center text-white">
@@ -467,7 +475,7 @@ export default function InspectionClient({ inspection }) {
                               className="w-16 h-16 object-cover rounded-lg border-2 border-gray-300"
                             />
                           )}
-                        </a>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -534,6 +542,14 @@ export default function InspectionClient({ inspection }) {
           existingData={modalState.existingData}
         />
       )}
+
+      {/* Lightbox */}
+      <Lightbox
+        isOpen={lightbox.isOpen}
+        onClose={() => setLightbox({ isOpen: false, media: [], initialIndex: 0 })}
+        media={lightbox.media}
+        initialIndex={lightbox.initialIndex}
+      />
     </div>
   )
 }
