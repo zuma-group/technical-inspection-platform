@@ -383,12 +383,14 @@ export default function NewTemplatePage() {
 
       <div className="flex gap-3 justify-end py-6 mt-6 border-t border-gray-200">
         <button
+          type="button"
           onClick={() => router.push('/templates')}
           className="btn btn-secondary"
         >
           Cancel
         </button>
         <button
+          type="button"
           onClick={handleSubmit}
           className="btn btn-primary"
         >

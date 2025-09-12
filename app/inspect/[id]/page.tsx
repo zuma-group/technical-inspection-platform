@@ -5,7 +5,12 @@ import { InspectionStatus } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
-async function getOrCreateInspection(equipmentId: string, templateId?: string) {
+async function getOrCreateInspection(
+  equipmentId: string, 
+  templateId?: string,
+  taskId?: string,
+  serialNumber?: string
+) {
   try {
     // Check if equipment exists
     const equipment = await prisma.equipment.findUnique({
@@ -151,6 +156,8 @@ async function getOrCreateInspection(equipmentId: string, templateId?: string) {
         equipmentId,
         technicianId: user.id,
         templateId: templateId || null,
+        taskId: taskId || null,
+        serialNumber: serialNumber || null,
         status: InspectionStatus.IN_PROGRESS,
         sections: {
           create: sections.map(section => ({
@@ -200,11 +207,49 @@ export default async function InspectPage({
   searchParams
 }: { 
   params: Promise<{ id: string }>
-  searchParams: Promise<{ template?: string }>
+  searchParams: Promise<{ template?: string; taskId?: string; serialNumber?: string; create?: string }>
 }) {
   const { id } = await params
-  const { template } = await searchParams
-  const inspection = await getOrCreateInspection(id, template)
+  const { template, taskId, serialNumber, create } = await searchParams
+  
+  // Only create inspection if explicitly requested or if template is provided
+  const shouldCreate = create === 'true' || !!template
+  
+  let inspection
+  if (shouldCreate) {
+    inspection = await getOrCreateInspection(id, template, taskId, serialNumber)
+  } else {
+    // Just get existing inspection, don't create
+    inspection = await prisma.inspection.findFirst({
+      where: {
+        equipmentId: id,
+        status: InspectionStatus.IN_PROGRESS,
+      },
+      include: {
+        equipment: true,
+        sections: {
+          orderBy: { order: 'asc' },
+          include: {
+            checkpoints: {
+              orderBy: { order: 'asc' },
+              include: {
+                media: {
+                  select: {
+                    id: true,
+                    type: true,
+                    filename: true,
+                    mimeType: true,
+                    size: true,
+                    createdAt: true
+                  }
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+  }
 
   if (!inspection) {
     notFound()

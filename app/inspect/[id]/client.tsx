@@ -38,8 +38,8 @@ export default function InspectionClient({ inspection }) {
   const progress = (completedCheckpoints / totalCheckpoints) * 100
 
   const handleCheckpoint = (checkpointId: string, checkpointName: string, status: string) => {
-    if (status === 'PASS') {
-      // Pass is instant, no modal
+    if (status === 'PASS' || status === 'NOT_APPLICABLE') {
+      // Pass and N/A are instant, no modal
       setCheckpoints(prev => ({ 
         ...prev, 
         [checkpointId]: { ...prev[checkpointId], status } 
@@ -116,29 +116,29 @@ export default function InspectionClient({ inspection }) {
     })
   }
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (completedCheckpoints === totalCheckpoints) {
-      startTransition(async () => {
-        await completeInspection(inspection.id)
-        router.push('/')
-      })
+      const result = await completeInspection(inspection.id)
+      if (result.success) {
+        // Use window.location for a hard refresh to ensure data is refetched
+        window.location.href = '/'
+      }
     }
   }
 
-  const handleStopInspection = () => {
+  const handleStopInspection = async () => {
     const confirmed = confirm(
       'Are you sure you want to stop this inspection? All progress will be lost and you will need to start over.'
     )
     
     if (confirmed) {
-      startTransition(async () => {
-        const result = await stopInspection(inspection.id)
-        if (result.success) {
-          router.push(`/inspect/${inspection.equipmentId}/select-template`)
-        } else {
-          alert('Failed to stop inspection. Please try again.')
-        }
-      })
+      const result = await stopInspection(inspection.id)
+      if (result.success) {
+        // Use window.location for a hard refresh to ensure data is refetched
+        window.location.href = '/'
+      } else {
+        alert('Failed to stop inspection. Please try again.')
+      }
     }
   }
 
@@ -248,22 +248,38 @@ export default function InspectionClient({ inspection }) {
 
           {/* Desktop sections list */}
           <div className="flex-1 overflow-y-auto p-4">
-            {inspection.sections.map((s, i) => (
-              <button
-                key={s.id}
-                onClick={() => setCurrentSection(i)}
-                className={`w-full text-left p-3 mb-2 rounded-lg transition-all ${
-                  i === currentSection 
-                    ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-600' 
-                    : 'hover:bg-teal-50 border border-gray-200'
-                }`}
-              >
-                <div className="font-semibold">{s.name}</div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {s.checkpoints.filter(cp => checkpoints[cp.id]?.status).length}/{s.checkpoints.length} done
-                </div>
-              </button>
-            ))}
+            {inspection.sections.map((s, i) => {
+              const sectionCompleted = s.checkpoints.filter(cp => checkpoints[cp.id]?.status).length
+              const sectionTotal = s.checkpoints.length
+              const sectionProgress = (sectionCompleted / sectionTotal) * 100
+              
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setCurrentSection(i)}
+                  className={`w-full text-left p-3 mb-2 rounded-lg transition-all ${
+                    i === currentSection 
+                      ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-600' 
+                      : 'hover:bg-teal-50 border border-gray-200'
+                  }`}
+                >
+                  <div className="font-semibold">{s.name}</div>
+                  <div className="text-xs text-gray-500 mt-1 mb-2">
+                    {sectionCompleted}/{sectionTotal} done
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        sectionProgress === 100 ? 'bg-green-500' : 
+                        sectionProgress > 0 ? 'bg-blue-500' : 'bg-gray-300'
+                      }`}
+                      style={{ width: `${sectionProgress}%` }}
+                    />
+                  </div>
+                </button>
+              )
+            })}
           </div>
           
           {/* Desktop complete/stop buttons */}
@@ -310,12 +326,27 @@ export default function InspectionClient({ inspection }) {
 
               {cpData.status ? (
                 <>
-                  <div className={`p-3 rounded-lg text-center font-bold text-base ${
-                    cpData.status === 'PASS' ? 'bg-green-100 text-green-800' :
-                    cpData.status === 'CORRECTED' ? 'bg-yellow-100 text-yellow-800' : 
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {cpData.status.replace('_', ' ')}
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className={`flex-1 p-3 rounded-lg text-center font-bold text-base ${
+                      cpData.status === 'PASS' ? 'bg-green-100 text-green-800' :
+                      cpData.status === 'CORRECTED' ? 'bg-yellow-100 text-yellow-800' : 
+                      cpData.status === 'NOT_APPLICABLE' ? 'bg-gray-100 text-gray-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {cpData.status === 'NOT_APPLICABLE' ? 'N/A' : cpData.status.replace('_', ' ')}
+                    </div>
+                    <button
+                      onClick={() => {
+                        // Reset status to allow re-selection
+                        setCheckpoints(prev => ({
+                          ...prev,
+                          [checkpoint.id]: { ...prev[checkpoint.id], status: null }
+                        }))
+                      }}
+                      className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-semibold"
+                    >
+                      Edit
+                    </button>
                   </div>
                   
                   {/* Show notes if exists */}
@@ -362,27 +393,34 @@ export default function InspectionClient({ inspection }) {
                   )}
                 </>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'PASS')}
-                    className="bg-green-700 text-white min-h-[60px] text-base font-bold py-4 px-2 rounded-lg border-2 border-green-900 shadow-lg hover:bg-green-800 active:bg-green-900 disabled:opacity-60 transition-all"
+                    className="bg-green-500 text-white min-h-[60px] text-base font-bold py-4 px-2 rounded-lg border-2 border-green-600 shadow-lg hover:bg-green-600 active:bg-green-700 disabled:opacity-60 transition-all"
                     disabled={isPending}
                   >
                     PASS
                   </button>
                   <button
                     onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'CORRECTED')}
-                    className="bg-amber-600 text-white min-h-[60px] text-base font-bold py-4 px-1 rounded-lg border-2 border-amber-800 shadow-lg hover:bg-amber-700 active:bg-amber-800 disabled:opacity-60 transition-all"
+                    className="bg-yellow-500 text-gray-900 min-h-[60px] text-base font-bold py-4 px-1 rounded-lg border-2 border-yellow-600 shadow-lg hover:bg-yellow-400 active:bg-yellow-600 disabled:opacity-60 transition-all"
                     disabled={isPending}
                   >
                     FIXED
                   </button>
                   <button
                     onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'ACTION_REQUIRED')}
-                    className="bg-red-700 text-white min-h-[60px] text-base font-bold py-4 px-1 rounded-lg border-2 border-red-900 shadow-lg hover:bg-red-800 active:bg-red-900 disabled:opacity-60 transition-all"
+                    className="bg-red-500 text-white min-h-[60px] text-base font-bold py-4 px-1 rounded-lg border-2 border-red-600 shadow-lg hover:bg-red-600 active:bg-red-700 disabled:opacity-60 transition-all"
                     disabled={isPending}
                   >
                     ACTION
+                  </button>
+                  <button
+                    onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'NOT_APPLICABLE')}
+                    className="bg-gray-500 text-white min-h-[60px] text-base font-bold py-4 px-1 rounded-lg border-2 border-gray-600 shadow-lg hover:bg-gray-600 active:bg-gray-700 disabled:opacity-60 transition-all"
+                    disabled={isPending}
+                  >
+                    N/A
                   </button>
                 </div>
               )}

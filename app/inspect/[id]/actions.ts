@@ -39,12 +39,29 @@ export async function updateCheckpoint(
 
 export async function stopInspection(inspectionId: string) {
   try {
+    console.log('Stopping inspection:', inspectionId)
+    
+    // First check if inspection exists
+    const inspection = await prisma.inspection.findUnique({
+      where: { id: inspectionId }
+    })
+    
+    if (!inspection) {
+      console.error('Inspection not found:', inspectionId)
+      return { success: false, error: 'Inspection not found' }
+    }
+    
+    console.log('Found inspection, deleting...', inspection)
+    
     // Delete the inspection and all related data (cascading delete will handle sections, checkpoints, media)
     await prisma.inspection.delete({
       where: { id: inspectionId }
     })
     
-    revalidatePath('/')
+    console.log('Inspection deleted successfully')
+    
+    revalidatePath('/', 'layout')
+    revalidatePath('/', 'page')
     revalidatePath('/inspect/[id]', 'page')
     return { success: true }
   } catch (error) {
@@ -107,7 +124,8 @@ export async function completeInspection(inspectionId: string) {
       })
     ])
     
-    revalidatePath('/')
+    revalidatePath('/', 'layout')
+    revalidatePath('/', 'page')
     revalidatePath('/dashboard')
     return { success: true, equipmentStatus }
   } catch (error) {
@@ -119,7 +137,13 @@ export async function completeInspection(inspectionId: string) {
   }
 }
 
-export async function createInspection(equipmentId: string, technicianId: string, templateId?: string) {
+export async function createInspection(
+  equipmentId: string, 
+  technicianId: string, 
+  templateId?: string,
+  taskId?: string,
+  serialNumber?: string
+) {
   try {
     // Check if there's already an in-progress inspection
     const existingInspection = await prisma.inspection.findFirst({
@@ -179,6 +203,8 @@ export async function createInspection(equipmentId: string, technicianId: string
         equipmentId,
         technicianId,
         templateId: template.id,
+        taskId: taskId || null,
+        serialNumber: serialNumber || null,
         status: InspectionStatus.IN_PROGRESS,
         sections: {
           create: template.sections.map(section => ({
