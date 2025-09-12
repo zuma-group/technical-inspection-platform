@@ -65,139 +65,113 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        <div className="stat-card text-center">
-          <h3 className="text-sm text-gray-500 mb-2 font-semibold uppercase">
+      {/* Metrics Cards - More compact */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="stat-card text-center py-4">
+          <h3 className="text-xs text-gray-500 mb-1 font-semibold uppercase">
             TOTAL EQUIPMENT
           </h3>
-          <p className="stat-value text-gray-900">
+          <p className="text-2xl font-bold text-gray-900">
             {totalEquipment}
           </p>
         </div>
 
-        <div className="stat-card text-center">
-          <h3 className="text-sm text-gray-500 mb-2 font-semibold uppercase">
+        <div className="stat-card text-center py-4">
+          <h3 className="text-xs text-gray-500 mb-1 font-semibold uppercase">
             OPERATIONAL
           </h3>
-          <p className="stat-value text-green-500">
+          <p className="text-2xl font-bold text-green-500">
             {operationalCount}
           </p>
-          <p className="stat-label">
+          <p className="text-xs text-gray-600">
             {Math.round((operationalCount / totalEquipment) * 100)}% of fleet
           </p>
         </div>
 
-        <div className="stat-card text-center">
-          <h3 className="text-sm text-gray-500 mb-2 font-semibold uppercase">
+        <div className="stat-card text-center py-4">
+          <h3 className="text-xs text-gray-500 mb-1 font-semibold uppercase">
             NEEDS ATTENTION
           </h3>
-          <p className="stat-value text-amber-500">
+          <p className="text-2xl font-bold text-amber-500">
             {maintenanceCount}
           </p>
-          <p className="stat-label">
+          <p className="text-xs text-gray-600">
             In maintenance
           </p>
         </div>
 
-        <div className="stat-card text-center">
-          <h3 className="text-sm text-gray-500 mb-2 font-semibold uppercase">
+        <div className="stat-card text-center py-4">
+          <h3 className="text-xs text-gray-500 mb-1 font-semibold uppercase">
             OUT OF SERVICE
           </h3>
-          <p className="stat-value text-red-500">
+          <p className="text-2xl font-bold text-red-500">
             {outOfServiceCount}
           </p>
-          <p className="stat-label">
+          <p className="text-xs text-gray-600">
             Requires repair
           </p>
         </div>
       </div>
 
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr',
-        gap: '24px'
-      }}>
+      <div className="space-y-4">
         {/* Equipment Status Chart */}
         <div className="card">
-          <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
+          <h2 className="text-base font-semibold mb-4">
             Equipment Status Distribution
           </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap' }}>
+          <div className="space-y-4">
             {/* Simple bar chart */}
-            <div style={{ flex: 1, minWidth: '200px' }}>
-              <div style={{ 
-                display: 'flex', 
-                height: '30px', 
-                borderRadius: '8px',
-                overflow: 'hidden',
-                marginBottom: '20px'
-              }}>
+            <div className="w-full">
+              <div className="flex h-8 rounded-lg overflow-hidden mb-3">
                 {operationalCount > 0 && (
-                  <div style={{
-                    width: `${(operationalCount / totalEquipment) * 100}%`,
-                    background: '#10B981',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: '600',
-                    fontSize: '14px'
-                  }}>
-                    {operationalCount > 0 && `${operationalCount}`}
+                  <div 
+                    className="bg-green-500 flex items-center justify-center text-white font-semibold text-sm"
+                    style={{ width: `${(operationalCount / totalEquipment) * 100}%` }}
+                  >
+                    {operationalCount}
                   </div>
                 )}
                 {maintenanceCount > 0 && (
-                  <div style={{
-                    width: `${(maintenanceCount / totalEquipment) * 100}%`,
-                    background: '#F59E0B',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: '600',
-                    fontSize: '14px'
-                  }}>
-                    {maintenanceCount > 0 && `${maintenanceCount}`}
+                  <div 
+                    className="bg-amber-500 flex items-center justify-center text-white font-semibold text-sm"
+                    style={{ width: `${(maintenanceCount / totalEquipment) * 100}%` }}
+                  >
+                    {maintenanceCount}
                   </div>
                 )}
                 {outOfServiceCount > 0 && (
-                  <div style={{
-                    width: `${(outOfServiceCount / totalEquipment) * 100}%`,
-                    background: '#EF4444',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: '600',
-                    fontSize: '14px'
-                  }}>
-                    {outOfServiceCount > 0 && `${outOfServiceCount}`}
+                  <div 
+                    className="bg-red-500 flex items-center justify-center text-white font-semibold text-sm"
+                    style={{ width: `${(outOfServiceCount / totalEquipment) * 100}%` }}
+                  >
+                    {outOfServiceCount}
                   </div>
                 )}
               </div>
               
               {/* Legend */}
-              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '12px', height: '12px', background: '#10B981', borderRadius: '2px' }}></div>
-                  <span style={{ fontSize: '14px', color: '#6B7280' }}>Operational</span>
+              <div className="flex gap-4 flex-wrap text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded"></div>
+                  <span className="text-gray-600">Operational</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '12px', height: '12px', background: '#F59E0B', borderRadius: '2px' }}></div>
-                  <span style={{ fontSize: '14px', color: '#6B7280' }}>Maintenance</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-amber-500 rounded"></div>
+                  <span className="text-gray-600">Maintenance</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '12px', height: '12px', background: '#EF4444', borderRadius: '2px' }}></div>
-                  <span style={{ fontSize: '14px', color: '#6B7280' }}>Out of Service</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded"></div>
+                  <span className="text-gray-600">Out of Service</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Recent Inspections */}
-        <div className="card">
+        {/* Recent Inspections and Overdue Equipment in 2-column grid on larger screens */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Recent Inspections */}
+          <div className="card">
           <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
             Recent Inspections
           </h2>
@@ -331,11 +305,12 @@ export default async function DashboardPage() {
                         Inspect Now
                       </button>
                     </Link>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

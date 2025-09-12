@@ -70,7 +70,7 @@ export default async function HomePage() {
         
         <div className="flex justify-center mt-12">
           <Link href="/equipment/new" className="no-underline">
-            <div className="card flex flex-col items-center justify-center min-h-[240px] cursor-pointer border-2 border-dashed border-gray-300 hover:border-gray-400 transition-all p-8 max-w-md">
+            <div className="card flex flex-col items-center justify-center min-h-[240px] cursor-pointer border-3 border-dashed border-blue-400 hover:border-blue-500 transition-all p-8 max-w-md">
               <Icons.addCircle className="w-12 h-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold mb-2">Add Equipment</h3>
               <p className="text-gray-500 text-center">
@@ -176,7 +176,7 @@ export default async function HomePage() {
         
         {/* Add Equipment Card */}
         <Link href="/equipment/new" className="no-underline">
-          <div className="card flex flex-col items-center justify-center min-h-[240px] cursor-pointer border-2 border-dashed border-gray-300 hover:border-gray-400 transition-all h-full">
+          <div className="card flex flex-col items-center justify-center min-h-[240px] cursor-pointer border-3 border-dashed border-blue-400 hover:border-blue-500 transition-all h-full">
             <Icons.addCircle className="w-12 h-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold mb-2">Add Equipment</h3>
             <p className="text-gray-500 text-center">

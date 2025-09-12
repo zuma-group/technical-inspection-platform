@@ -51,94 +51,103 @@ export default function NewEquipmentPage() {
         <p className="text-gray-600 mt-2">Register new equipment for inspection</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="card max-w-2xl mx-auto shadow-lg hover:shadow-xl transition-shadow duration-300">
-        <div className="mb-5">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Model Name *
-          </label>
-          <input
-            type="text"
-            value={formData.model}
-            onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-            placeholder="e.g., Genie Z-45/25J"
-            required
-            className="form-input focus:scale-[1.01] transition-transform duration-200"
-          />
+      <form onSubmit={handleSubmit} className="card">
+        {/* Row 1: Model and Type */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Model Name *
+            </label>
+            <input
+              type="text"
+              value={formData.model}
+              onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+              placeholder="e.g., Genie Z-45/25J"
+              required
+              className="form-input focus:scale-[1.01] transition-transform duration-200"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Equipment Type *
+            </label>
+            <CustomSelect
+              value={formData.type}
+              onChange={(value) => setFormData({ ...formData, type: value })}
+              placeholder="Select equipment type"
+              options={[
+                { value: 'BOOM_LIFT', label: 'Boom Lift' },
+                { value: 'SCISSOR_LIFT', label: 'Scissor Lift' },
+                { value: 'TELEHANDLER', label: 'Telehandler' },
+                { value: 'FORKLIFT', label: 'Forklift' },
+                { value: 'OTHER', label: 'Other' }
+              ]}
+            />
+          </div>
         </div>
 
-        <div className="mb-5">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Equipment Type *
-          </label>
-          <CustomSelect
-            value={formData.type}
-            onChange={(value) => setFormData({ ...formData, type: value })}
-            placeholder="Select equipment type"
-            options={[
-              { value: 'BOOM_LIFT', label: 'Boom Lift' },
-              { value: 'SCISSOR_LIFT', label: 'Scissor Lift' },
-              { value: 'TELEHANDLER', label: 'Telehandler' },
-              { value: 'FORKLIFT', label: 'Forklift' },
-              { value: 'OTHER', label: 'Other' }
-            ]}
-          />
+        {/* Row 2: Serial and Location */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Serial Number *
+            </label>
+            <input
+              type="text"
+              value={formData.serial}
+              onChange={(e) => setFormData({ ...formData, serial: e.target.value })}
+              placeholder="e.g., SN123456789"
+              required
+              className="form-input focus:scale-[1.01] transition-transform duration-200"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Location *
+            </label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              placeholder="e.g., Site A - North Yard"
+              required
+              className="form-input focus:scale-[1.01] transition-transform duration-200"
+            />
+          </div>
         </div>
 
-        <div className="mb-5">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Serial Number *
-          </label>
-          <input
-            type="text"
-            value={formData.serial}
-            onChange={(e) => setFormData({ ...formData, serial: e.target.value })}
-            placeholder="e.g., SN123456789"
-            required
-            className="form-input focus:scale-[1.01] transition-transform duration-200"
-          />
-        </div>
+        {/* Row 3: Hours and Status */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-2 gap-4 mb-6">
+          <div className="md:col-span-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Hours Used
+            </label>
+            <input
+              type="number"
+              value={formData.hoursUsed}
+              onChange={(e) => setFormData({ ...formData, hoursUsed: parseInt(e.target.value) || 0 })}
+              min="0"
+              className="form-input focus:scale-[1.01] transition-transform duration-200"
+            />
+          </div>
 
-        <div className="mb-5">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Location *
-          </label>
-          <input
-            type="text"
-            value={formData.location}
-            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            placeholder="e.g., Site A - North Yard"
-            required
-            className="form-input focus:scale-[1.01] transition-transform duration-200"
-          />
-        </div>
-
-        <div className="mb-5">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Hours Used
-          </label>
-          <input
-            type="number"
-            value={formData.hoursUsed}
-            onChange={(e) => setFormData({ ...formData, hoursUsed: parseInt(e.target.value) || 0 })}
-            min="0"
-            className="form-input focus:scale-[1.01] transition-transform duration-200"
-          />
-        </div>
-
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Status
-          </label>
-          <CustomSelect
-            value={formData.status}
-            onChange={(value) => setFormData({ ...formData, status: value })}
-            placeholder="Select status"
-            options={[
-              { value: 'OPERATIONAL', label: 'Operational' },
-              { value: 'MAINTENANCE', label: 'Maintenance' },
-              { value: 'OUT_OF_SERVICE', label: 'Out of Service' }
-            ]}
-          />
+          <div className="md:col-span-2 lg:col-span-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Status
+            </label>
+            <CustomSelect
+              value={formData.status}
+              onChange={(value) => setFormData({ ...formData, status: value })}
+              placeholder="Select status"
+              options={[
+                { value: 'OPERATIONAL', label: 'Operational' },
+                { value: 'MAINTENANCE', label: 'Maintenance' },
+                { value: 'OUT_OF_SERVICE', label: 'Out of Service' }
+              ]}
+            />
+          </div>
         </div>
 
         <div className="flex gap-3 justify-end pt-5 border-t border-gray-200">

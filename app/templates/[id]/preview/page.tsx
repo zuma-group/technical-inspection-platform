@@ -27,38 +27,32 @@ export default async function PreviewTemplatePage({
   )
 
   return (
-    <div className="container">
-      <div className="page-header">
-        <div style={{ marginBottom: '24px' }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-8">
+        <div className="mb-6">
           <Link href="/templates">
-            <button className="btn btn-secondary" style={{ padding: '8px 16px' }}>
+            <button className="btn btn-secondary">
               ← Back to Templates
             </button>
           </Link>
         </div>
         <div>
-          <h1 className="page-title">{template.name}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{template.name}</h1>
           {template.description && (
-            <p className="page-subtitle">{template.description}</p>
+            <p className="text-gray-600 mt-2">{template.description}</p>
           )}
-          <div style={{ 
-            display: 'flex', 
-            gap: '20px', 
-            marginTop: '16px',
-            fontSize: '14px',
-            color: '#6B7280'
-          }}>
-            <span>Equipment Type: <strong>{template.equipmentType.replace('_', ' ')}</strong></span>
-            <span>Sections: <strong>{template.sections.length}</strong></span>
-            <span>Total Checkpoints: <strong>{totalCheckpoints}</strong></span>
-            <span>Critical: <strong>{criticalCheckpoints}</strong></span>
+          <div className="flex flex-wrap gap-6 mt-4 text-sm text-gray-600">
+            <span>Equipment Type: <strong className="text-gray-900">{template.equipmentType.replace('_', ' ')}</strong></span>
+            <span>Sections: <strong className="text-gray-900">{template.sections.length}</strong></span>
+            <span>Total Checkpoints: <strong className="text-gray-900">{totalCheckpoints}</strong></span>
+            <span>Critical: <strong className="text-red-600">{criticalCheckpoints}</strong></span>
           </div>
         </div>
       </div>
 
-      <div style={{ marginBottom: '24px' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {template.sections.map((section, _sectionIndex) => (
-          <div key={section.id} className="card" style={{ marginBottom: '20px' }}>
+          <div key={section.id} className="card">
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -89,28 +83,13 @@ export default async function PreviewTemplatePage({
               {section.checkpoints.map((checkpoint, _cpIndex) => (
                 <div 
                   key={checkpoint.id}
-                  style={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '8px 12px',
-                    background: '#F9FAFB',
-                    borderRadius: '6px',
-                    border: checkpoint.critical ? '1px solid #FCA5A5' : '1px solid #E5E7EB'
-                  }}
+                  className={`flex items-center gap-3 p-2 px-3 rounded border-2 ${checkpoint.critical ? 'bg-red-50 border-red-400' : 'bg-teal-50 border-teal-300'}`}
                 >
-                  <span style={{ 
-                    fontSize: '13px',
-                    color: '#6B7280',
-                    minWidth: '60px'
-                  }}>
-                    {checkpoint.code}
-                  </span>
-                  <span style={{ flex: 1, fontSize: '14px' }}>
+                  <span className="flex-1 text-sm">
                     {checkpoint.name}
                   </span>
                   {checkpoint.critical && (
-                    <span className="critical-badge">CRITICAL</span>
+                    <span className="px-2 py-1 text-xs font-semibold bg-red-500 text-white rounded">CRITICAL</span>
                   )}
                 </div>
               ))}

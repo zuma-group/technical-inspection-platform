@@ -151,7 +151,7 @@ export default function InspectionClient({ inspection }) {
           <div className="flex items-center justify-between gap-3 mb-3">
             <button
               onClick={() => router.push('/')}
-              className="bg-gray-800 text-white min-h-[60px] px-5 flex items-center gap-2 rounded-lg font-semibold hover:bg-gray-900 active:bg-black transition-all"
+              className="bg-indigo-600 text-white min-h-[60px] px-5 flex items-center gap-2 rounded-lg font-semibold border-2 border-indigo-700 hover:bg-indigo-700 active:bg-indigo-800 transition-all"
             >
               <Icons.back className="w-6 h-6" />
               <span className="font-semibold text-base">Back</span>
@@ -202,7 +202,7 @@ export default function InspectionClient({ inspection }) {
                         ? 'bg-blue-700 text-white shadow-xl scale-105 border-blue-900' 
                         : isComplete
                         ? 'bg-green-600 text-white border-green-800'
-                        : 'bg-white text-gray-900 border-gray-400 shadow-md'
+                        : 'bg-teal-600 text-white border-teal-700 shadow-md'
                     }`}
                   >
                     <div className="font-bold text-base whitespace-nowrap">{s.name}</div>
@@ -255,13 +255,10 @@ export default function InspectionClient({ inspection }) {
                 className={`w-full text-left p-3 mb-2 rounded-lg transition-all ${
                   i === currentSection 
                     ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-600' 
-                    : 'hover:bg-gray-100'
+                    : 'hover:bg-teal-50 border border-gray-200'
                 }`}
               >
-                <div className="font-semibold">{s.code}</div>
-                <div className="text-sm text-gray-600 mt-1">
-                  {s.name}
-                </div>
+                <div className="font-semibold">{s.name}</div>
                 <div className="text-xs text-gray-500 mt-1">
                   {s.checkpoints.filter(cp => checkpoints[cp.id]?.status).length}/{s.checkpoints.length} done
                 </div>
@@ -303,8 +300,7 @@ export default function InspectionClient({ inspection }) {
               return (
                 <div key={checkpoint.id} className="card p-4">
               <div className="mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-bold text-gray-700">{checkpoint.code}</span>
+                <div className="mb-2">
                   {checkpoint.critical && (
                     <span className="px-2 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-full">CRITICAL</span>
                   )}

@@ -87,7 +87,7 @@ export default async function SelectTemplatePage({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Default Template Option */}
         <Link href={`/inspect/${id}`} className="no-underline group">
-          <div className="card border-2 border-blue-500 cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 h-full flex flex-col">
+          <div className="card border-3 border-blue-500 cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 h-full flex flex-col">
             <div className="flex-1 mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <Icons.gauge className="w-5 h-5 text-blue-600" />
@@ -131,7 +131,7 @@ export default async function SelectTemplatePage({
               className="no-underline group"
             >
               <div className={`card cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 h-full flex flex-col ${
-                isRecommended ? 'border-2 border-green-500' : ''
+                isRecommended ? 'border-3 border-green-500' : 'border-2 border-gray-300'
               }`}>
                 <div className="flex-1 mb-4">
                   <div className="flex justify-between items-start mb-2">

@@ -33,7 +33,7 @@
   }
 
   .btn-secondary {
-    @apply bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed;
+    @apply bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 disabled:opacity-60 disabled:cursor-not-allowed;
   }
 
   .btn-success {
@@ -50,7 +50,7 @@
 
   /* Card styles */
   .card {
-    @apply bg-white rounded-xl p-4 md:p-5 shadow-sm hover:shadow-md transition-shadow;
+    @apply bg-white rounded-xl p-4 md:p-5 shadow-md border-2 border-gray-300 hover:shadow-lg transition-shadow;
   }
 
   /* Status badges */
@@ -85,7 +85,7 @@
 
   /* Form elements */
   .form-input {
-    @apply w-full px-4 py-3 border border-gray-300 rounded-lg text-base transition-all focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20;
+    @apply w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-base transition-all focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20;
   }
 
   .form-select {
@@ -102,16 +102,16 @@
   }
 
   .modal-content {
-    @apply bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto;
+    @apply bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto border-2 border-gray-400 shadow-xl;
   }
 
   /* Inspection sections */
   .section-header {
-    @apply bg-gray-50 p-4 rounded-t-lg border-b border-gray-200;
+    @apply bg-teal-50 p-4 rounded-t-lg border-b-2 border-teal-200;
   }
 
   .checkpoint-item {
-    @apply flex items-center justify-between p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors;
+    @apply flex items-center justify-between p-4 border-b-2 border-gray-200 last:border-b-0 hover:bg-teal-50 transition-colors;
   }
 
   /* Loading states */
@@ -121,7 +121,7 @@
 
   /* Stats card */
   .stat-card {
-    @apply bg-white p-6 rounded-xl shadow-sm;
+    @apply bg-white p-6 rounded-xl shadow-md border-2 border-gray-300;
   }
 
   .stat-value {
