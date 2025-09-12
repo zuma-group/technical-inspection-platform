@@ -15,7 +15,7 @@ export default function NewEquipmentPage() {
     serial: '',
     location: '',
     hoursUsed: 0,
-    status: 'OPERATIONAL'
+    taskId: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,9 +27,13 @@ export default function NewEquipmentPage() {
     }
 
     try {
-      await createEquipment(formData)
-      router.push('/')
-      router.refresh()
+      const result = await createEquipment(formData)
+      if (result?.success) {
+        router.push('/')
+        router.refresh()
+      } else {
+        alert(result?.error || 'Failed to create equipment')
+      }
     } catch (error) {
       console.error('Failed to create equipment:', error)
       alert('Failed to create equipment')
@@ -118,7 +122,7 @@ export default function NewEquipmentPage() {
           </div>
         </div>
 
-        {/* Row 3: Hours and Status */}
+        {/* Row 3: Hours and Task ID */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-2 gap-4 mb-6">
           <div className="md:col-span-1">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -135,17 +139,14 @@ export default function NewEquipmentPage() {
 
           <div className="md:col-span-2 lg:col-span-1">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Status
+              Task ID (Stock No.)
             </label>
-            <CustomSelect
-              value={formData.status}
-              onChange={(value) => setFormData({ ...formData, status: value })}
-              placeholder="Select status"
-              options={[
-                { value: 'OPERATIONAL', label: 'Operational' },
-                { value: 'MAINTENANCE', label: 'Maintenance' },
-                { value: 'OUT_OF_SERVICE', label: 'Out of Service' }
-              ]}
+            <input
+              type="text"
+              value={formData.taskId}
+              onChange={(e) => setFormData({ ...formData, taskId: e.target.value })}
+              placeholder="Enter external task ID"
+              className="form-input focus:scale-[1.01] transition-transform duration-200"
             />
           </div>
         </div>

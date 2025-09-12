@@ -48,6 +48,7 @@ model Equipment {
   serial       String       @unique
   location     String
   hoursUsed    Int          @default(0)
+  taskId       String?
   status       EquipmentStatus @default(OPERATIONAL)
   inspections  Inspection[]
   createdAt    DateTime     @default(now())
@@ -55,6 +56,7 @@ model Equipment {
 
   @@index([status])
   @@index([type])
+  @@index([taskId])
 }
 
 model Inspection {

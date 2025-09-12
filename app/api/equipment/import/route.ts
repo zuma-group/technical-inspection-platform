@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       serial, 
       location, 
       hoursUsed, 
-      status,
+      taskId,
       additionalData // Any extra fields from the external system
     } = body
 
@@ -82,15 +82,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new equipment
+    const createData: any = {
+      type,
+      model,
+      serial,
+      location,
+      hoursUsed: hoursUsed || 0
+    }
+    if (taskId) createData.taskId = taskId
+
     const equipment = await prisma.equipment.create({
-      data: {
-        type,
-        model,
-        serial,
-        location,
-        hoursUsed: hoursUsed || 0,
-        status: status || 'OPERATIONAL'
-      },
+      data: createData,
       include: {
         inspections: {
           select: {
