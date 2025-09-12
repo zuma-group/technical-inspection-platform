@@ -63,7 +63,7 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { type, model, serial, location, hoursUsed, status } = body
+    const { type, model, serial, location, hoursUsed, taskId } = body
 
     // Check if equipment exists
     const existingEquipment = await prisma.equipment.findUnique({
@@ -100,7 +100,7 @@ export async function PUT(
         ...(serial && { serial }),
         ...(location && { location }),
         ...(hoursUsed !== undefined && { hoursUsed }),
-        ...(status && { status })
+        ...(taskId !== undefined && { taskId })
       },
       include: {
         inspections: {

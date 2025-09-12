@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { EquipmentType, EquipmentStatus } from '@prisma/client'
 
 export async function createEquipment(data: {
   model: string
@@ -10,36 +9,31 @@ export async function createEquipment(data: {
   serial: string
   location: string
   hoursUsed: number
-  status: string
+  taskId?: string
 }) {
   try {
-    // Validate and convert type
-    const equipmentType = data.type.toUpperCase().replace(' ', '_') as EquipmentType
-    if (!Object.values(EquipmentType).includes(equipmentType)) {
+    // Validate and convert type without relying on generated Prisma enums at lint time
+    const EQUIPMENT_TYPES = ['BOOM_LIFT','SCISSOR_LIFT','TELEHANDLER','FORKLIFT','OTHER'] as const
+    const equipmentType = data.type.toUpperCase().replace(' ', '_')
+    if (!EQUIPMENT_TYPES.includes(equipmentType as any)) {
       throw new Error(`Invalid equipment type: ${data.type}`)
-    }
-
-    // Validate and convert status
-    const equipmentStatus = data.status as EquipmentStatus
-    if (!Object.values(EquipmentStatus).includes(equipmentStatus)) {
-      throw new Error(`Invalid equipment status: ${data.status}`)
     }
 
     const equipment = await prisma.equipment.create({
       data: {
         model: data.model,
-        type: equipmentType,
+        type: equipmentType as any,
         serial: data.serial,
         location: data.location,
         hoursUsed: data.hoursUsed,
-        status: equipmentStatus
-      }
+        taskId: data.taskId
+      } as any
     })
     
     revalidatePath('/')
     return { success: true, data: equipment }
   } catch (error) {
-    console.error('Failed to create equipment:', error)
+    console.error('Failed to create equipment:', error instanceof Error ? error.message : String(error))
     
     // Check for unique constraint violation
     if (error instanceof Error && error.message.includes('Unique constraint')) {
@@ -62,7 +56,7 @@ export async function updateEquipment(id: string, data: Partial<{
   serial: string
   location: string
   hoursUsed: number
-  status: string
+  taskId: string
 }>) {
   try {
     const updateData: Record<string, any> = {}
@@ -72,33 +66,27 @@ export async function updateEquipment(id: string, data: Partial<{
     if (data.serial !== undefined) updateData.serial = data.serial
     if (data.location !== undefined) updateData.location = data.location
     if (data.hoursUsed !== undefined) updateData.hoursUsed = data.hoursUsed
+    if (data.taskId !== undefined) updateData.taskId = data.taskId
     
     if (data.type !== undefined) {
-      const equipmentType = data.type.toUpperCase().replace(' ', '_') as EquipmentType
-      if (!Object.values(EquipmentType).includes(equipmentType)) {
+      const EQUIPMENT_TYPES = ['BOOM_LIFT','SCISSOR_LIFT','TELEHANDLER','FORKLIFT','OTHER'] as const
+      const equipmentType = data.type.toUpperCase().replace(' ', '_')
+      if (!EQUIPMENT_TYPES.includes(equipmentType as any)) {
         throw new Error(`Invalid equipment type: ${data.type}`)
       }
-      updateData.type = equipmentType
-    }
-    
-    if (data.status !== undefined) {
-      const equipmentStatus = data.status as EquipmentStatus
-      if (!Object.values(EquipmentStatus).includes(equipmentStatus)) {
-        throw new Error(`Invalid equipment status: ${data.status}`)
-      }
-      updateData.status = equipmentStatus
+      updateData.type = equipmentType as any
     }
 
     const equipment = await prisma.equipment.update({
       where: { id },
-      data: updateData
+      data: updateData as any
     })
     
     revalidatePath('/')
     revalidatePath(`/equipment/${id}`)
     return { success: true, data: equipment }
   } catch (error) {
-    console.error('Failed to update equipment:', error)
+    console.error('Failed to update equipment:', error instanceof Error ? error.message : String(error))
     
     if (error instanceof Error && error.message.includes('Record to update not found')) {
       return { 
@@ -123,7 +111,7 @@ export async function deleteEquipment(id: string) {
     revalidatePath('/')
     return { success: true }
   } catch (error) {
-    console.error('Failed to delete equipment:', error)
+    console.error('Failed to delete equipment:', error instanceof Error ? error.message : String(error))
     
     if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
       return { 

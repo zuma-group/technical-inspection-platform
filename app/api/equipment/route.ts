@@ -58,15 +58,26 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, model, serial, location, hoursUsed, status } = body
+    const { type: inputType, model, serial, location, hoursUsed, taskId } = body
 
     // Validate required fields
-    if (!type || !model || !serial || !location) {
+    if (!model || !serial || !location) {
       return NextResponse.json(
-        { error: 'Missing required fields: type, model, serial, location' },
+        { error: 'Missing required fields: model, serial, location' },
         { status: 400 }
       )
     }
+
+    // Normalize and validate enum-like inputs to reduce failures
+    const normalizeEnum = (value?: string) =>
+      value?.toString().trim().toUpperCase().replace(/[\s-]+/g, '_')
+
+    const EQUIPMENT_TYPES = ['BOOM_LIFT','SCISSOR_LIFT','TELEHANDLER','FORKLIFT','OTHER'] as const
+
+    const normalizedType = normalizeEnum(inputType)
+    const validatedType = EQUIPMENT_TYPES.includes((normalizedType as any)) ? normalizedType : 'OTHER'
+
+    
 
     // Check if equipment with this serial already exists
     const existingEquipment = await prisma.equipment.findUnique({
@@ -81,15 +92,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new equipment
+    const createData: any = {
+      type: validatedType as any,
+      model,
+      serial,
+      location,
+      hoursUsed: hoursUsed || 0
+    }
+    if (taskId) createData.taskId = taskId
+
     const equipment = await prisma.equipment.create({
-      data: {
-        type,
-        model,
-        serial,
-        location,
-        hoursUsed: hoursUsed || 0,
-        status: status || 'OPERATIONAL'
-      },
+      data: createData,
       include: {
         inspections: {
           select: {
