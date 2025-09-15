@@ -53,6 +53,7 @@ import {
   Copy,
   Clipboard
 } from 'lucide-react';
+import { Mic, MicOff } from 'lucide-react';
 
 export const Icons = {
   // Navigation
@@ -121,6 +122,8 @@ export const Icons = {
   play: PlayCircle,
   pause: PauseCircle,
   loader: Loader2,
+  mic: Mic,
+  micOff: MicOff,
 };
 
 // Consistent sizing classes
