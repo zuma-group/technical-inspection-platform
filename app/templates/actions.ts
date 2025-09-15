@@ -55,10 +55,8 @@ export async function createTemplate(data: {
   parentTemplateId?: string
   sections: Array<{
     name: string
-    code: string
     order: number
     checkpoints: Array<{
-      code: string
       name: string
       critical: boolean
       order: number
@@ -81,7 +79,6 @@ export async function createTemplate(data: {
         sections: {
           create: data.sections.map(section => ({
             name: section.name,
-            code: section.code,
             order: section.order,
             checkpoints: {
               create: section.checkpoints
@@ -170,7 +167,6 @@ export async function addSection(
   templateId: string,
   data: {
     name: string
-    code: string
     order: number
   }
 ) {
@@ -179,7 +175,6 @@ export async function addSection(
       data: {
         templateId,
         name: data.name,
-        code: data.code,
         order: data.order
       }
     })
@@ -199,7 +194,6 @@ export async function updateSection(
   sectionId: string,
   data: {
     name?: string
-    code?: string
     order?: number
   }
 ) {
@@ -250,7 +244,6 @@ export async function deleteSection(sectionId: string) {
 export async function addCheckpoint(
   sectionId: string,
   data: {
-    code: string
     name: string
     critical: boolean
     order: number
@@ -260,7 +253,6 @@ export async function addCheckpoint(
     const checkpoint = await prisma.templateCheckpoint.create({
       data: {
         sectionId,
-        code: data.code,
         name: data.name,
         critical: data.critical,
         order: data.order
@@ -281,7 +273,6 @@ export async function addCheckpoint(
 export async function updateCheckpoint(
   checkpointId: string,
   data: {
-    code?: string
     name?: string
     critical?: boolean
     order?: number

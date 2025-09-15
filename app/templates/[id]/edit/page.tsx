@@ -14,11 +14,9 @@ export default function EditTemplatePage({ params }: { params: Promise<{ id: str
   const [sections, setSections] = useState<Array<{
     id: string;
     name: string;
-    code: string;
     order: number;
     checkpoints: Array<{
       id: string;
-      code: string;
       name: string;
       critical: boolean;
       order: number;
@@ -45,7 +43,6 @@ export default function EditTemplatePage({ params }: { params: Promise<{ id: str
   const handleAddSection = async () => {
     const result = await addSection(templateId, {
       name: 'New Section',
-      code: 'NS',
       order: sections.length + 1
     })
     if (result.success && result.data) {
@@ -72,7 +69,6 @@ export default function EditTemplatePage({ params }: { params: Promise<{ id: str
     if (!section) return
     
     const result = await addCheckpoint(sectionId, {
-      code: `${section.code}-${(section.checkpoints.length + 1).toString().padStart(2, '0')}`,
       name: 'New Checkpoint',
       critical: false,
       order: section.checkpoints.length + 1

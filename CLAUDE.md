@@ -107,3 +107,4 @@ npm run db:seed    # Add test equipment and templates
 - Files stored directly in `public/uploads/`
 - No cloud storage dependencies
 - Direct URL access for instant loading
+- Don't attempt restarting stuff, okay? If not explicitly asked, just tell me which commands to run and I will do myself if I decide they are relevant for our solutions

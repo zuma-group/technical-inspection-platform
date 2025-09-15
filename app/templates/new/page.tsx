@@ -19,11 +19,9 @@ export default function NewTemplatePage() {
     sections: Array<{
       id: string;
       name: string;
-      code: string;
       order: number;
       checkpoints: Array<{
         id: string;
-        code: string;
         name: string;
         critical: boolean;
         order: number;
@@ -34,7 +32,6 @@ export default function NewTemplatePage() {
     {
       id: 'temp-1',
       name: '',
-      code: '',
       order: 1,
       checkpoints: [],
       inherited: false
@@ -80,7 +77,6 @@ export default function NewTemplatePage() {
           return [{
             id: 'temp-1',
             name: '',
-            code: '',
             order: 1,
             checkpoints: [],
             inherited: false
@@ -95,7 +91,6 @@ export default function NewTemplatePage() {
     setSections([...sections, {
       id: `temp-${Date.now()}`,
       name: '',
-      code: '',
       order: sections.length + 1,
       checkpoints: [],
       inherited: false
@@ -124,7 +119,6 @@ export default function NewTemplatePage() {
             ...s,
             checkpoints: [...s.checkpoints, {
               id: `cp-${Date.now()}`,
-              code: '',
               name: '',
               critical: false,
               order: s.checkpoints.length + 1
@@ -172,7 +166,7 @@ export default function NewTemplatePage() {
     
     // Validate that all sections have required fields
     // Inherited sections should already have valid data from parent
-    const invalidSections = sections.filter(s => !s.name || !s.code)
+    const invalidSections = sections.filter(s => !s.name)
     if (invalidSections.length > 0) {
       alert('Please fill in all required fields for sections')
       return
@@ -183,10 +177,8 @@ export default function NewTemplatePage() {
       // This way the child has a complete copy of parent sections plus its own
       const sectionsToCreate = sections.map((s, idx) => ({
         name: s.name,
-        code: s.code,
         order: idx + 1,
         checkpoints: s.checkpoints.map((cp, cpIdx) => ({
-          code: cp.code,
           name: cp.name,
           critical: cp.critical,
           order: cpIdx + 1

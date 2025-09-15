@@ -85,7 +85,6 @@ model Section {
   inspectionId String
   inspection   Inspection   @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
   name         String
-  code         String
   order        Int
   checkpoints  Checkpoint[]
 }
@@ -94,7 +93,6 @@ model Checkpoint {
   id             String   @id @default(cuid())
   sectionId      String
   section        Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  code           String
   name           String
   critical       Boolean  @default(false)
   status         CheckpointStatus?
@@ -153,7 +151,6 @@ model TemplateSection {
   templateId  String
   template    InspectionTemplate    @relation(fields: [templateId], references: [id], onDelete: Cascade)
   name        String
-  code        String
   order       Int
   checkpoints TemplateCheckpoint[]
 }
@@ -162,7 +159,6 @@ model TemplateCheckpoint {
   id        String           @id @default(cuid())
   sectionId String
   section   TemplateSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  code      String
   name      String
   critical  Boolean          @default(false)
   order     Int

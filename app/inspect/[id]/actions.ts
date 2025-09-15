@@ -219,11 +219,9 @@ export async function createInspection(
         sections: {
           create: template.sections.map(section => ({
             name: section.name,
-            code: section.code,
             order: section.order,
             checkpoints: {
               create: section.checkpoints.map(checkpoint => ({
-                code: checkpoint.code,
                 name: checkpoint.name,
                 critical: checkpoint.critical,
                 order: checkpoint.order,
