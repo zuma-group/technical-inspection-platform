@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { CheckpointStatus, InspectionStatus, EquipmentStatus } from '@prisma/client'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import { sendEmailWithPdf } from '@/lib/email'
 
 export async function updateCheckpoint(
   checkpointId: string, 
@@ -12,15 +13,15 @@ export async function updateCheckpoint(
 ) {
   try {
     // Validate status
-    const checkpointStatus = status as CheckpointStatus
-    if (!Object.values(CheckpointStatus).includes(checkpointStatus)) {
+    const CHECKPOINT_STATUSES = ['PASS','CORRECTED','ACTION_REQUIRED','NOT_APPLICABLE'] as const
+    if (!CHECKPOINT_STATUSES.includes(status as any)) {
       throw new Error(`Invalid checkpoint status: ${status}`)
     }
 
     await prisma.checkpoint.update({
       where: { id: checkpointId },
       data: { 
-        status: checkpointStatus,
+        status: status as any,
         notes: notes || null,
         estimatedHours: estimatedHours || null
       },
@@ -101,15 +102,15 @@ export async function completeInspection(inspectionId: string) {
     const allCheckpoints = inspection.sections.flatMap(section => section.checkpoints)
     
     // Check for issues
-    const hasActionRequired = allCheckpoints.some(cp => cp.status === CheckpointStatus.ACTION_REQUIRED)
-    const hasCriticalIssues = allCheckpoints.some(cp => cp.critical && cp.status === CheckpointStatus.ACTION_REQUIRED)
+    const hasActionRequired = allCheckpoints.some(cp => cp.status === 'ACTION_REQUIRED')
+    const hasCriticalIssues = allCheckpoints.some(cp => cp.critical && cp.status === 'ACTION_REQUIRED')
     
     // Determine equipment status
-    let equipmentStatus: EquipmentStatus = EquipmentStatus.OPERATIONAL
+    let equipmentStatus: any = 'OPERATIONAL'
     if (hasCriticalIssues) {
-      equipmentStatus = EquipmentStatus.OUT_OF_SERVICE
+      equipmentStatus = 'OUT_OF_SERVICE'
     } else if (hasActionRequired) {
-      equipmentStatus = EquipmentStatus.MAINTENANCE
+      equipmentStatus = 'MAINTENANCE'
     }
 
     console.log('Updating to equipment status:', equipmentStatus)
@@ -120,7 +121,7 @@ export async function completeInspection(inspectionId: string) {
       prisma.inspection.update({
         where: { id: inspectionId },
         data: {
-          status: InspectionStatus.COMPLETED,
+          status: 'COMPLETED' as any,
           completedAt: new Date(),
         }
       }),
@@ -134,6 +135,102 @@ export async function completeInspection(inspectionId: string) {
     console.log('Transaction complete. Inspection status:', updatedInspection.status)
     console.log('Equipment status:', updatedEquipment.status)
     
+    // Generate PDF report and send email (best-effort; non-blocking failure)
+    try {
+      const finalInspection = await prisma.inspection.findUnique({
+        where: { id: inspectionId },
+        include: {
+          equipment: true,
+          technician: { select: { name: true, email: true } },
+          sections: {
+            orderBy: { order: 'asc' },
+            include: { checkpoints: { orderBy: { order: 'asc' } } }
+          }
+        }
+      })
+
+      if (finalInspection) {
+        const pdfDoc = await PDFDocument.create()
+        const pageMargin = 50
+        const pageWidth = 612
+        const pageHeight = 792
+        const titleFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+        const bodyFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
+
+        const addPage = () => pdfDoc.addPage([pageWidth, pageHeight])
+        let page = addPage()
+        let y = pageHeight - pageMargin
+
+        const drawText = (text: string, options?: { size?: number; font?: any; color?: any }) => {
+          const size = options?.size ?? 12
+          const font = options?.font ?? bodyFont
+          const color = options?.color ?? rgb(0, 0, 0)
+          const maxWidth = pageWidth - pageMargin * 2
+          const words = text.split(' ')
+          let line = ''
+          const lines: string[] = []
+          for (const w of words) {
+            const test = line ? line + ' ' + w : w
+            const width = font.widthOfTextAtSize(test, size)
+            if (width > maxWidth) {
+              if (line) lines.push(line)
+              line = w
+            } else {
+              line = test
+            }
+          }
+          if (line) lines.push(line)
+          for (const l of lines) {
+            if (y - size < pageMargin) {
+              page = addPage()
+              y = pageHeight - pageMargin
+            }
+            page.drawText(l, { x: pageMargin, y, size, font, color })
+            y -= size + 4
+          }
+        }
+
+        drawText('Inspection Report', { size: 20, font: titleFont })
+        y -= 6
+        drawText(`Equipment: ${finalInspection.equipment.model} (${finalInspection.equipment.serial})`)
+        drawText(`Date: ${new Date(finalInspection.startedAt).toLocaleString()}`)
+        drawText(`Status: ${finalInspection.status.replace(/_/g, ' ')}`)
+        drawText(`Technician: ${finalInspection.technician?.name || 'N/A'}`)
+        y -= 8
+
+        for (const section of finalInspection.sections) {
+          y -= 6
+          drawText(section.name, { size: 14, font: titleFont })
+          for (const cp of section.checkpoints) {
+            const statusText = cp.status ?? 'N/A'
+            const critical = cp.critical ? ' (CRITICAL)' : ''
+            drawText(`• [${statusText}] ${cp.name}${critical}`)
+            if (cp.notes) drawText(`   Notes: ${cp.notes}`)
+          }
+        }
+
+        const pdfBytes = await pdfDoc.save()
+
+        const toEmail = process.env.REPORT_FALLBACK_EMAIL
+        if (toEmail) {
+          const info = await sendEmailWithPdf({
+            to: toEmail,
+            subject: `Inspection Report - ${finalInspection.equipment.model} (${finalInspection.equipment.serial})`,
+            text: 'Please find the attached inspection report PDF.',
+            pdf: { filename: `inspection-${finalInspection.id}.pdf`, content: Buffer.from(pdfBytes) }
+          })
+          console.log('📧 Inspection report email queued', {
+            to: toEmail,
+            messageId: (info as any)?.messageId || 'n/a'
+          })
+        } else {
+          console.warn('No recipient email found for inspection report')
+        }
+      }
+    } catch (emailErr) {
+      console.error('Failed to email inspection report:', emailErr)
+    }
+
     revalidatePath('/', 'layout')
     revalidatePath('/', 'page')
     revalidatePath('/dashboard')
@@ -159,7 +256,7 @@ export async function createInspection(
     const existingInspection = await prisma.inspection.findFirst({
       where: {
         equipmentId,
-        status: InspectionStatus.IN_PROGRESS
+        status: 'IN_PROGRESS' as any
       }
     })
 
@@ -170,7 +267,7 @@ export async function createInspection(
     // Get template if specified, otherwise get default template for equipment type
     let template = null
     if (templateId) {
-      template = await prisma.inspectionTemplate.findUnique({
+      template = await (prisma as any).inspectionTemplate.findUnique({
         where: { id: templateId },
         include: {
           sections: {
@@ -187,7 +284,7 @@ export async function createInspection(
       })
       
       if (equipment) {
-        template = await prisma.inspectionTemplate.findFirst({
+        template = await (prisma as any).inspectionTemplate.findFirst({
           where: {
             equipmentType: equipment.type,
             isDefault: true
@@ -215,10 +312,14 @@ export async function createInspection(
         templateId: template.id,
         taskId: taskId || null,
         serialNumber: serialNumber || null,
-        status: InspectionStatus.IN_PROGRESS,
+        status: 'IN_PROGRESS' as any,
         sections: {
-          create: template.sections.map(section => ({
+          create: template.sections.map((section, idx) => ({
             name: section.name,
+            code: (section.name || `Section ${idx + 1}`)
+              .toUpperCase()
+              .replace(/[^A-Z0-9]/g, '')
+              .slice(0, 6) || `SEC${idx + 1}`,
             order: section.order,
             checkpoints: {
               create: section.checkpoints.map(checkpoint => ({
@@ -232,7 +333,7 @@ export async function createInspection(
             }
           }))
         }
-      },
+      } as any,
       include: {
         sections: {
           include: {

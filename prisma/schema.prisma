@@ -85,6 +85,7 @@ model Section {
   inspectionId String
   inspection   Inspection   @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
   name         String
+  code         String
   order        Int
   checkpoints  Checkpoint[]
 }
