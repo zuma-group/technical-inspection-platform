@@ -35,28 +35,26 @@ async function main() {
         create: [
           {
             name: 'Platform & Basket',
-            code: 'PB',
             order: 1,
             checkpoints: {
               create: [
-                { code: 'PB-01', name: 'Guard Rails Secure', critical: true, order: 1 },
-                { code: 'PB-02', name: 'Gate Functions', critical: true, order: 2 },
-                { code: 'PB-03', name: 'Control Panel', critical: false, order: 3 },
-                { code: 'PB-04', name: 'Emergency Stop', critical: true, order: 4 },
-                { code: 'PB-05', name: 'Floor Condition', critical: false, order: 5 },
+                { name: 'Guard Rails Secure', critical: true, order: 1 },
+                { name: 'Gate Functions', critical: true, order: 2 },
+                { name: 'Control Panel', critical: false, order: 3 },
+                { name: 'Emergency Stop', critical: true, order: 4 },
+                { name: 'Floor Condition', critical: false, order: 5 },
               ]
             }
           },
           {
             name: 'Boom & Hydraulics',
-            code: 'BH',
             order: 2,
             checkpoints: {
               create: [
-                { code: 'BH-01', name: 'Hydraulic Fluid Level', critical: true, order: 1 },
-                { code: 'BH-02', name: 'Cylinder Condition', critical: true, order: 2 },
-                { code: 'BH-03', name: 'Hose Inspection', critical: true, order: 3 },
-                { code: 'BH-04', name: 'Boom Movement', critical: false, order: 4 },
+                { name: 'Hydraulic Fluid Level', critical: true, order: 1 },
+                { name: 'Cylinder Condition', critical: true, order: 2 },
+                { name: 'Hose Inspection', critical: true, order: 3 },
+                { name: 'Boom Movement', critical: false, order: 4 },
               ]
             }
           }
@@ -75,24 +73,22 @@ async function main() {
         create: [
           {
             name: 'Platform',
-            code: 'PL',
             order: 1,
             checkpoints: {
               create: [
-                { code: 'PL-01', name: 'Platform Rails', critical: true, order: 1 },
-                { code: 'PL-02', name: 'Entry Gate', critical: true, order: 2 },
-                { code: 'PL-03', name: 'Controls', critical: false, order: 3 },
+                { name: 'Platform Rails', critical: true, order: 1 },
+                { name: 'Entry Gate', critical: true, order: 2 },
+                { name: 'Controls', critical: false, order: 3 },
               ]
             }
           },
           {
             name: 'Scissor Mechanism',
-            code: 'SM',
             order: 2,
             checkpoints: {
               create: [
-                { code: 'SM-01', name: 'Scissor Arms', critical: true, order: 1 },
-                { code: 'SM-02', name: 'Pivot Points', critical: true, order: 2 },
+                { name: 'Scissor Arms', critical: true, order: 1 },
+                { name: 'Pivot Points', critical: true, order: 2 },
               ]
             }
           }
@@ -111,25 +107,23 @@ async function main() {
         create: [
           {
             name: 'Boom & Fork',
-            code: 'BF',
             order: 1,
             checkpoints: {
               create: [
-                { code: 'BF-01', name: 'Fork Condition', critical: true, order: 1 },
-                { code: 'BF-02', name: 'Boom Extension', critical: true, order: 2 },
-                { code: 'BF-03', name: 'Load Chart', critical: false, order: 3 },
+                { name: 'Fork Condition', critical: true, order: 1 },
+                { name: 'Boom Extension', critical: true, order: 2 },
+                { name: 'Load Chart', critical: false, order: 3 },
               ]
             }
           },
           {
             name: 'Cab & Controls',
-            code: 'CC',
             order: 2,
             checkpoints: {
               create: [
-                { code: 'CC-01', name: 'Seat & Seatbelt', critical: true, order: 1 },
-                { code: 'CC-02', name: 'Mirrors & Glass', critical: false, order: 2 },
-                { code: 'CC-03', name: 'Controls Operation', critical: true, order: 3 },
+                { name: 'Seat & Seatbelt', critical: true, order: 1 },
+                { name: 'Mirrors & Glass', critical: false, order: 2 },
+                { name: 'Controls Operation', critical: true, order: 3 },
               ]
             }
           }

@@ -61,16 +61,6 @@ export default async function PreviewTemplatePage({
               paddingBottom: '12px',
               borderBottom: '2px solid #E5E7EB'
             }}>
-              <span style={{ 
-                background: '#2563EB',
-                color: 'white',
-                padding: '4px 12px',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}>
-                {section.code}
-              </span>
               <h2 style={{ fontSize: '18px', fontWeight: '600', flex: 1 }}>
                 {section.name}
               </h2>

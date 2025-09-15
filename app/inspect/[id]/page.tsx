@@ -87,10 +87,8 @@ async function getOrCreateInspection(
       if (template) {
         sections = template.sections.map(section => ({
           name: section.name,
-          code: section.code,
           order: section.order,
           checkpoints: section.checkpoints.map(cp => ({
-            code: cp.code,
             name: cp.name,
             critical: cp.critical,
             order: cp.order
@@ -121,10 +119,8 @@ async function getOrCreateInspection(
       if (defaultTemplate) {
         sections = defaultTemplate.sections.map(section => ({
           name: section.name,
-          code: section.code,
           order: section.order,
           checkpoints: section.checkpoints.map(cp => ({
-            code: cp.code,
             name: cp.name,
             critical: cp.critical,
             order: cp.order
@@ -138,13 +134,12 @@ async function getOrCreateInspection(
       sections = [
         {
           name: 'General Inspection',
-          code: 'GEN',
           order: 1,
           checkpoints: [
-            { code: 'GEN-01', name: 'Visual Inspection', critical: false, order: 1 },
-            { code: 'GEN-02', name: 'Safety Features', critical: true, order: 2 },
-            { code: 'GEN-03', name: 'Operating Controls', critical: true, order: 3 },
-            { code: 'GEN-04', name: 'Documentation', critical: false, order: 4 },
+            { name: 'Visual Inspection', critical: false, order: 1 },
+            { name: 'Safety Features', critical: true, order: 2 },
+            { name: 'Operating Controls', critical: true, order: 3 },
+            { name: 'Documentation', critical: false, order: 4 },
           ],
         }
       ]
@@ -162,7 +157,6 @@ async function getOrCreateInspection(
         sections: {
           create: sections.map(section => ({
             name: section.name,
-            code: section.code,
             order: section.order,
             checkpoints: {
               create: section.checkpoints,
