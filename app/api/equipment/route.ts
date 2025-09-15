@@ -10,39 +10,65 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const type = searchParams.get('type')
     const location = searchParams.get('location')
+    const taskId = searchParams.get('taskId')
 
     const where: Record<string, any> = {}
     
     if (status) where.status = status
     if (type) where.type = type
     if (location) where.location = { contains: location, mode: 'insensitive' }
+    if (taskId) where.taskId = taskId
 
-    const equipment = await prisma.equipment.findMany({
+    const equipmentRaw = await prisma.equipment.findMany({
       where,
       include: {
         inspections: {
-          select: {
-            id: true,
-            status: true,
-            startedAt: true,
-            completedAt: true,
+          include: {
             technician: {
               select: {
                 name: true,
                 email: true
               }
+            },
+            sections: {
+              include: {
+                checkpoints: {
+                  select: {
+                    id: true,
+                    media: {
+                      select: { id: true, type: true }
+                    }
+                  }
+                }
+              }
             }
           },
-          orderBy: {
-            startedAt: 'desc'
-          },
-          take: 5 // Latest 5 inspections
+          orderBy: { startedAt: 'desc' },
+          take: 5
         }
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      orderBy: { createdAt: 'desc' }
     })
+
+    // Map to add media URLs and pdfUrl without returning heavy section data
+    const equipment = equipmentRaw.map((eq: any) => ({
+      ...eq,
+      inspections: eq.inspections.map((insp: any) => {
+        const media = (insp.sections || [])
+          .flatMap((s: any) => s.checkpoints)
+          .flatMap((cp: any) => cp.media || [])
+          .map((m: any) => ({ id: m.id, type: m.type, url: `/api/media/${m.id}` }))
+        return {
+          id: insp.id,
+          status: insp.status,
+          startedAt: insp.startedAt,
+          completedAt: insp.completedAt,
+          technician: insp.technician,
+          pdfUrl: `/api/inspections/${insp.id}/pdf`,
+          media
+        }
+      })
+    }))
 
     return NextResponse.json({ equipment })
   } catch (error) {
