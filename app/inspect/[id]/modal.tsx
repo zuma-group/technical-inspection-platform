@@ -37,11 +37,18 @@ export default function CheckpointModal({
 }: ModalProps) {
   const [currentStatus, setCurrentStatus] = useState(existingData?.status || status)
   const [notes, setNotes] = useState(existingData?.notes || '')
+  const [interimText, setInterimText] = useState('')
   const [estimatedHours, setEstimatedHours] = useState(existingData?.estimatedHours?.toString() || '')
   const [mediaFiles, setMediaFiles] = useState<File[]>([])
   const [mediaPreviews, setMediaPreviews] = useState<string[]>([])
   const [existingMedia, setExistingMedia] = useState(existingData?.media || [])
   const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([])
+  const [isListening, setIsListening] = useState(false)
+  const [speechSupported, setSpeechSupported] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return typeof (window as any).SpeechRecognition !== 'undefined' || typeof (window as any).webkitSpeechRecognition !== 'undefined'
+  })
+  const recognitionRef = useRef<any>(null)
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean
     media: Array<{ id: string; type: string }>
@@ -51,6 +58,75 @@ export default function CheckpointModal({
   const videoInputRef = useRef<HTMLInputElement>(null)
   const uploadPhotoRef = useRef<HTMLInputElement>(null)
   const uploadVideoRef = useRef<HTMLInputElement>(null)
+
+  // Initialize recognition lazily to avoid SSR issues
+  const ensureRecognition = () => {
+    if (!speechSupported) return null
+    if (recognitionRef.current) return recognitionRef.current
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) return null
+    const recognition = new SpeechRecognition()
+    recognition.lang = navigator.language || 'en-US'
+    recognition.interimResults = true
+    recognition.continuous = true
+    recognition.maxAlternatives = 1
+    recognition.onstart = () => setIsListening(true)
+    recognition.onend = () => {
+      setIsListening(false)
+      setInterimText('')
+    }
+    recognition.onerror = () => {
+      setIsListening(false)
+      setInterimText('')
+    }
+    recognition.onresult = (event: any) => {
+      let interim = ''
+      const finals: string[] = []
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript
+        if (event.results[i].isFinal) {
+          finals.push(transcript)
+        } else {
+          interim += transcript
+        }
+      }
+      if (finals.length > 0) {
+        const finalText = finals.join(' ').trim()
+        if (finalText) {
+          setNotes(prev => (prev ? prev + ' ' : '') + finalText)
+        }
+        setInterimText('')
+      } else {
+        setInterimText(interim.trim())
+      }
+    }
+    recognitionRef.current = recognition
+    return recognition
+  }
+
+  const startDictation = () => {
+    if (!speechSupported) return
+    const rec = ensureRecognition()
+    if (!rec) return
+    try {
+      // Restart if already listening
+      if (isListening) {
+        rec.stop()
+      }
+      setInterimText('')
+      rec.start()
+    } catch {
+      // Ignore repeated start errors
+    }
+  }
+
+  const stopDictation = () => {
+    const rec = recognitionRef.current
+    if (rec && isListening) {
+      try { rec.stop() } catch {}
+    }
+    setInterimText('')
+  }
 
   if (!isOpen) return null
 
@@ -81,6 +157,8 @@ export default function CheckpointModal({
   }
 
   const handleSubmit = () => {
+    // Ensure we stop listening before submit
+    stopDictation()
     const data = {
       status: currentStatus,
       notes,
@@ -338,9 +416,35 @@ export default function CheckpointModal({
           <label className="block text-sm font-semibold mb-2">
             {currentStatus === 'CORRECTED' ? 'What was corrected?' : 'What needs to be done?'}
           </label>
+          <div className="flex items-center gap-2 mb-2">
+            <button
+              type="button"
+              onClick={() => (isListening ? stopDictation() : startDictation())}
+              disabled={!speechSupported}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm ${
+                isListening
+                  ? 'bg-red-500 text-white border-red-600 hover:bg-red-600'
+                  : speechSupported
+                    ? 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
+                    : 'bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed'
+              }`}
+              title={speechSupported ? (isListening ? 'Stop dictation' : 'Start dictation') : 'Speech recognition not supported'}
+            >
+              {isListening
+                ? (Icons.micOff ? <Icons.micOff className={iconSizes.sm} /> : <span>●</span>)
+                : (Icons.mic ? <Icons.mic className={iconSizes.sm} /> : <span>🎤</span>)}
+              <span>{isListening ? 'Stop' : 'Dictate'}</span>
+            </button>
+            {!speechSupported && (
+              <span className="text-xs text-gray-500">Voice input not supported in this browser</span>
+            )}
+          </div>
           <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            value={notes + (isListening && interimText ? (notes ? ' ' : '') + interimText : '')}
+            onChange={(e) => {
+              setNotes(e.target.value)
+              setInterimText('')
+            }}
             rows={4}
             className="form-textarea"
             placeholder={currentStatus === 'CORRECTED' 
