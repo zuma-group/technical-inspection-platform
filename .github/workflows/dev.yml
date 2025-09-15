@@ -182,6 +182,10 @@ jobs:
           # Rebuild and restart containers
           echo "🔨 Building and starting containers..."
           docker compose -f docker-compose.postgres.yml build --no-cache
+
+          # Apply DB migrations before starting app
+          docker compose -f docker-compose.postgres.yml run --rm app npx prisma migrate deploy
+
           docker compose -f docker-compose.postgres.yml up -d
           
           # Clean up SSH key

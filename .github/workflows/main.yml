@@ -227,12 +227,13 @@ jobs:
             exit 1
           fi
           
+          # Build completed successfully
+
+          # Apply DB migrations before starting app
+          docker compose -f docker-compose.postgres.yml run --rm app npx prisma migrate deploy
+
           docker compose -f docker-compose.postgres.yml up -d
           
-          # Wait for containers to start
-          echo "⏳ Waiting for containers to start..."
-          sleep 10
-          echo "⏳ Still waiting..."
           sleep 10
           echo "⏳ Almost ready..."
           sleep 5
