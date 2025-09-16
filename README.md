@@ -148,6 +148,37 @@ On inspection completion:
 - Test on actual mobile devices in sunlight
 - Ensure forms work with one finger/thumb
 
+## Speech-to-Text (Google Cloud)
+
+This project supports Google Cloud Speech-to-Text for cross-browser dictation.
+
+Setup environment variables (one of the following):
+
+1) Provide JSON credentials inline (recommended for server deployments):
+
+```
+GOOGLE_APPLICATION_CREDENTIALS_JSON={"type":"service_account", ...}
+GOOGLE_CLOUD_PROJECT=your-project-id
+```
+
+2) Or use Application Default Credentials:
+
+```
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+GOOGLE_CLOUD_PROJECT=your-project-id
+```
+
+Client usage: send recorded audio (webm/ogg/wav) to `POST /api/speech-to-text` with either multipart form:
+
+```
+form-data:
+  audio: <File>
+  mimeType: audio/webm (optional)
+  languageCode: en-US (optional)
+```
+
+The response returns `{ transcript: string }`.
+
 ## License
 
 MIT

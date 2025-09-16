@@ -58,6 +58,8 @@ export default function CheckpointModal({
   const videoInputRef = useRef<HTMLInputElement>(null)
   const uploadPhotoRef = useRef<HTMLInputElement>(null)
   const uploadVideoRef = useRef<HTMLInputElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordedChunksRef = useRef<Blob[]>([])
 
   // Initialize recognition lazily to avoid SSR issues
   const ensureRecognition = () => {
@@ -105,19 +107,8 @@ export default function CheckpointModal({
   }
 
   const startDictation = () => {
-    if (!speechSupported) return
-    const rec = ensureRecognition()
-    if (!rec) return
-    try {
-      // Restart if already listening
-      if (isListening) {
-        rec.stop()
-      }
-      setInterimText('')
-      rec.start()
-    } catch {
-      // Ignore repeated start errors
-    }
+    // Always use Google STT for cross-browser support
+    startRecordingForCloud()
   }
 
   const stopDictation = () => {
@@ -126,6 +117,60 @@ export default function CheckpointModal({
       try { rec.stop() } catch {}
     }
     setInterimText('')
+    stopRecordingForCloud()
+  }
+
+  async function startRecordingForCloud() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      let chosenMime: string | undefined = undefined
+      if (typeof (window as any).MediaRecorder !== 'undefined') {
+        if ((window as any).MediaRecorder.isTypeSupported?.('audio/webm;codecs=opus')) {
+          chosenMime = 'audio/webm;codecs=opus'
+        } else if ((window as any).MediaRecorder.isTypeSupported?.('audio/ogg;codecs=opus')) {
+          chosenMime = 'audio/ogg;codecs=opus'
+        } else if ((window as any).MediaRecorder.isTypeSupported?.('audio/webm')) {
+          chosenMime = 'audio/webm'
+        } else if ((window as any).MediaRecorder.isTypeSupported?.('audio/ogg')) {
+          chosenMime = 'audio/ogg'
+        }
+      }
+      const mr = new MediaRecorder(stream, chosenMime ? { mimeType: chosenMime } as any : undefined)
+      recordedChunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordedChunksRef.current.push(e.data) }
+      mr.onstop = async () => {
+        const containerType = chosenMime?.split(';')[0] || 'audio/webm'
+        const blob = new Blob(recordedChunksRef.current, { type: containerType })
+        const formData = new FormData()
+        formData.append('audio', blob, 'recording')
+        formData.append('mimeType', containerType)
+        formData.append('languageCode', navigator.language || 'en-US')
+        try {
+          const res = await fetch('/api/speech-to-text', { method: 'POST', body: formData })
+          if (res.ok) {
+            const json = await res.json()
+            if (json.transcript) {
+              setNotes(prev => (prev ? prev + ' ' : '') + json.transcript)
+            }
+          }
+        } catch (e) {
+          console.error('Cloud STT failed', e)
+        }
+      }
+      mediaRecorderRef.current = mr
+      setIsListening(true)
+      mr.start()
+    } catch (e) {
+      console.error('Mic access failed', e)
+    }
+  }
+
+  function stopRecordingForCloud() {
+    const mr = mediaRecorderRef.current
+    if (mr && mr.state !== 'inactive') {
+      try { mr.stop() } catch {}
+      setIsListening(false)
+    }
   }
 
   if (!isOpen) return null
