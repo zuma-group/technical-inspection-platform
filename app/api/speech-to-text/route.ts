@@ -90,6 +90,11 @@ export async function POST(request: NextRequest) {
     }
 
     const encoding = detectEncoding(mimeType)
+    let sampleRateHertz: number | undefined
+    if (encoding === 'WEBM_OPUS' || encoding === 'OGG_OPUS') {
+      // Opus streams are typically 48000 Hz. Google requires a valid, non-zero rate.
+      sampleRateHertz = 48000
+    }
     const audioContent = audioBuffer.toString('base64')
 
     const client = await getSpeechClient()
@@ -100,6 +105,7 @@ export async function POST(request: NextRequest) {
         languageCode,
         enableAutomaticPunctuation: true,
         enableWordTimeOffsets: false,
+        ...(sampleRateHertz ? { sampleRateHertz } : {}),
         model: 'latest_long',
       },
     })
