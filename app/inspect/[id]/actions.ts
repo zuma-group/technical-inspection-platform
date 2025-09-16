@@ -244,6 +244,61 @@ export async function completeInspection(inspectionId: string) {
   }
 }
 
+export async function markAllCheckpointsAsPass(inspectionId: string) {
+  try {
+    console.log('Marking all checkpoints as PASS for inspection:', inspectionId)
+    
+    // Get the inspection with all checkpoints
+    const inspection = await prisma.inspection.findUnique({
+      where: { id: inspectionId },
+      include: {
+        sections: {
+          include: {
+            checkpoints: true
+          }
+        }
+      }
+    })
+
+    if (!inspection) {
+      throw new Error('Inspection not found')
+    }
+
+    // Get all checkpoint IDs that don't already have a status
+    const checkpointIds = inspection.sections
+      .flatMap(section => section.checkpoints)
+      .filter(checkpoint => !checkpoint.status) // Only update checkpoints without a status
+      .map(checkpoint => checkpoint.id)
+
+    if (checkpointIds.length === 0) {
+      return { success: true, message: 'All checkpoints already have a status' }
+    }
+
+    // Update all checkpoints to PASS status
+    await prisma.checkpoint.updateMany({
+      where: {
+        id: { in: checkpointIds }
+      },
+      data: {
+        status: 'PASS' as any,
+        notes: null,
+        estimatedHours: null
+      }
+    })
+
+    console.log(`Updated ${checkpointIds.length} checkpoints to PASS`)
+    
+    revalidatePath('/inspect/[id]', 'page')
+    return { success: true, updatedCount: checkpointIds.length }
+  } catch (error) {
+    console.error('Failed to mark all checkpoints as pass:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to mark all checkpoints as pass' 
+    }
+  }
+}
+
 export async function createInspection(
   equipmentId: string, 
   technicianId: string, 

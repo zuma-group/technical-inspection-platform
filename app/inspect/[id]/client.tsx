@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { updateCheckpoint, completeInspection, stopInspection } from './actions'
+import { updateCheckpoint, completeInspection, stopInspection, markAllCheckpointsAsPass } from './actions'
 import CheckpointModal from './modal'
 import Lightbox from './lightbox'
 import { Icons, iconSizes } from '@/lib/icons'
@@ -206,6 +206,47 @@ export default function InspectionClient({ inspection }) {
     }
   }
 
+  const handleMarkAllAsPass = async () => {
+    const pendingCheckpoints = Object.entries(checkpoints).filter(([id, cp]: [string, any]) => !cp.status).length
+    
+    if (pendingCheckpoints === 0) {
+      alert('All checkpoints already have a status.')
+      return
+    }
+
+    const confirmed = confirm(
+      `Are you sure you want to mark all ${pendingCheckpoints} remaining checkpoints as PASS? This action cannot be undone.`
+    )
+    
+    if (confirmed) {
+      startTransition(async () => {
+        const result = await markAllCheckpointsAsPass(inspection.id)
+        if (result.success) {
+          // Update local state to reflect all checkpoints as PASS
+          const updatedCheckpoints = { ...checkpoints }
+          Object.keys(updatedCheckpoints).forEach(checkpointId => {
+            if (!updatedCheckpoints[checkpointId].status) {
+              updatedCheckpoints[checkpointId] = {
+                ...updatedCheckpoints[checkpointId],
+                status: 'PASS',
+                notes: null,
+                estimatedHours: null,
+                media: []
+              }
+            }
+          })
+          setCheckpoints(updatedCheckpoints)
+          
+          if (result.updatedCount) {
+            alert(`Successfully marked ${result.updatedCount} checkpoints as PASS.`)
+          }
+        } else {
+          alert('Failed to mark checkpoints as pass. Please try again.')
+        }
+      })
+    }
+  }
+
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
       {/* Mobile Header - Made much larger */}
@@ -361,6 +402,14 @@ export default function InspectionClient({ inspection }) {
           
           {/* Desktop complete/stop buttons */}
           <div className="p-4 border-t border-gray-200">
+            <button
+              onClick={handleMarkAllAsPass}
+              disabled={isPending || Object.entries(checkpoints).filter(([id, cp]: [string, any]) => !cp.status).length === 0}
+              className="btn btn-success w-full mb-2 text-sm"
+              title="Mark all remaining checkpoints as PASS"
+            >
+              Mark All as Pass
+            </button>
             <button
               onClick={handleComplete}
               disabled={completedCheckpoints < totalCheckpoints || isPending}
@@ -521,13 +570,22 @@ export default function InspectionClient({ inspection }) {
 
       {/* Mobile bottom bar - bigger button */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-400 p-4 z-30 shadow-2xl">
-        <button
-          onClick={handleComplete}
-          disabled={completedCheckpoints < totalCheckpoints || isPending}
-          className="bg-blue-700 text-white w-full min-h-[70px] text-lg font-bold shadow-xl rounded-lg border-2 border-blue-900 hover:bg-blue-800 active:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          COMPLETE INSPECTION ({completedCheckpoints}/{totalCheckpoints})
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleMarkAllAsPass}
+            disabled={isPending || Object.entries(checkpoints).filter(([id, cp]: [string, any]) => !cp.status).length === 0}
+            className="bg-green-600 text-white flex-1 min-h-[70px] text-base font-bold shadow-xl rounded-lg border-2 border-green-800 hover:bg-green-700 active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            MARK ALL PASS
+          </button>
+          <button
+            onClick={handleComplete}
+            disabled={completedCheckpoints < totalCheckpoints || isPending}
+            className="bg-blue-700 text-white flex-1 min-h-[70px] text-base font-bold shadow-xl rounded-lg border-2 border-blue-900 hover:bg-blue-800 active:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            COMPLETE ({completedCheckpoints}/{totalCheckpoints})
+          </button>
+        </div>
       </div>
 
       {/* Modal */}
