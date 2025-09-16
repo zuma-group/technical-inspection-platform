@@ -100,53 +100,150 @@ export default async function EquipmentDetailPage({
         {equipment.inspections.length === 0 ? (
           <p className="text-gray-600">No previous inspections for this equipment.</p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', tableLayout: 'fixed' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #E5E7EB' }}>
-                  <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Date</th>
-                  <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Status</th>
-                  <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Type</th>
-                  <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Technician</th>
-                  <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Issues</th>
-                  <th style={{ width: '28.5714%', padding: '12px', textAlign: 'left' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {equipment.inspections.map((insp) => {
-                  const checkpoints = insp.sections.flatMap(s => s.checkpoints)
-                  const criticalIssues = checkpoints.filter(cp => cp.critical && cp.status === 'ACTION_REQUIRED').length
-                  const nonCriticalIssues = checkpoints.filter(cp => !cp.critical && cp.status === 'ACTION_REQUIRED').length
-                  const totalIssues = criticalIssues + nonCriticalIssues
-                  const templateName = templateNameById[(insp as any).templateId as string]
-                  return (
-                    <tr key={insp.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
-                      <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{new Date(insp.startedAt).toLocaleString()}</td>
-                      <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{insp.status.replace(/_/g, ' ')}</td>
-                      <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{templateName || equipment.type.replace(/_/g, ' ')}</td>
-                      <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{insp.technician?.name || 'Field Tech'}</td>
-                      <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{totalIssues > 0 ? `${totalIssues} (${criticalIssues} critical)` : 'None'}</td>
-                      <td style={{ width: '28.5714%', padding: '12px' }}>
-                        <div className="flex gap-2 items-center" style={{ whiteSpace: 'nowrap' }}>
-                          <Link href={`/inspections/${insp.id}`}>
-                            <button className="btn btn-secondary text-sm">View</button>
-                          </Link>
-                          {insp.status === 'IN_PROGRESS' && (
-                            <Link href={`/inspect/${equipment.id}`}>
-                              <button className="btn btn-warning text-sm">Continue Inspection</button>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', fontSize: '14px', tableLayout: 'fixed' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #E5E7EB' }}>
+                    <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Date</th>
+                    <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Status</th>
+                    <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Type</th>
+                    <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Technician</th>
+                    <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Issues</th>
+                    <th style={{ width: '28.5714%', padding: '12px', textAlign: 'left' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {equipment.inspections.map((insp) => {
+                    const checkpoints = insp.sections.flatMap(s => s.checkpoints)
+                    const criticalIssues = checkpoints.filter(cp => cp.critical && cp.status === 'ACTION_REQUIRED').length
+                    const nonCriticalIssues = checkpoints.filter(cp => !cp.critical && cp.status === 'ACTION_REQUIRED').length
+                    const totalIssues = criticalIssues + nonCriticalIssues
+                    const templateName = templateNameById[(insp as any).templateId as string]
+                    const completedCheckpoints = checkpoints.filter(cp => cp.status).length
+                    const totalCheckpoints = checkpoints.length
+                    const progressPercentage = totalCheckpoints > 0 ? Math.round((completedCheckpoints / totalCheckpoints) * 100) : 0
+                    return (
+                      <tr key={insp.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
+                        <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>
+                          <div>{new Date(insp.startedAt).toLocaleDateString()}</div>
+                          <div className="text-xs text-gray-500 mt-1">{new Date(insp.startedAt).toLocaleTimeString()}</div>
+                        </td>
+                        <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>
+                          <div className="mb-2">{insp.status.replace(/_/g, ' ')}</div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full transition-all duration-300 ${
+                                progressPercentage === 100 ? 'bg-green-500' : 
+                                progressPercentage > 0 ? 'bg-blue-500' : 'bg-gray-300'
+                              }`}
+                              style={{ width: `${progressPercentage}%` }}
+                            />
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">{progressPercentage}% complete</div>
+                        </td>
+                        <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{templateName || equipment.type.replace(/_/g, ' ')}</td>
+                        <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{insp.technician?.name || 'Field Tech'}</td>
+                        <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{totalIssues > 0 ? `${totalIssues} (${criticalIssues} critical)` : 'None'}</td>
+                        <td style={{ width: '28.5714%', padding: '12px' }}>
+                          <div className="flex gap-2 items-center" style={{ whiteSpace: 'nowrap' }}>
+                            <Link href={`/inspections/${insp.id}`}>
+                              <button className="btn btn-secondary text-sm">View</button>
                             </Link>
-                          )}
-                          <Link href={`/api/inspections/${insp.id}/pdf`}>
-                            <button className="btn btn-primary text-sm">Download PDF</button>
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                            {insp.status === 'IN_PROGRESS' && (
+                              <Link href={`/inspect/${equipment.id}`}>
+                                <button className="btn btn-warning text-sm">Continue Inspection</button>
+                              </Link>
+                            )}
+                            <Link href={`/api/inspections/${insp.id}/pdf`}>
+                              <button className="btn btn-primary text-sm">Download PDF</button>
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+              {equipment.inspections.map((insp) => {
+                const checkpoints = insp.sections.flatMap(s => s.checkpoints)
+                const criticalIssues = checkpoints.filter(cp => cp.critical && cp.status === 'ACTION_REQUIRED').length
+                const nonCriticalIssues = checkpoints.filter(cp => !cp.critical && cp.status === 'ACTION_REQUIRED').length
+                const totalIssues = criticalIssues + nonCriticalIssues
+                const templateName = templateNameById[(insp as any).templateId as string]
+                const completedCheckpoints = checkpoints.filter(cp => cp.status).length
+                const totalCheckpoints = checkpoints.length
+                const progressPercentage = totalCheckpoints > 0 ? Math.round((completedCheckpoints / totalCheckpoints) * 100) : 0
+                return (
+                  <div key={insp.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="text-sm font-medium text-gray-900">
+                        {new Date(insp.startedAt).toLocaleDateString()}
+                      </div>
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        insp.status === 'IN_PROGRESS' ? 'bg-yellow-100 text-yellow-800' :
+                        insp.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {insp.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600">Progress:</span>
+                        <span className="text-sm font-medium">{progressPercentage}% complete</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className={`h-3 rounded-full transition-all duration-300 ${
+                            progressPercentage === 100 ? 'bg-green-500' : 
+                            progressPercentage > 0 ? 'bg-blue-500' : 'bg-gray-300'
+                          }`}
+                          style={{ width: `${progressPercentage}%` }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Type:</span>
+                        <span className="font-medium">{templateName || equipment.type.replace(/_/g, ' ')}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Technician:</span>
+                        <span className="font-medium">{insp.technician?.name || 'Field Tech'}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Issues:</span>
+                        <span className="font-medium">{totalIssues > 0 ? `${totalIssues} (${criticalIssues} critical)` : 'None'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Link href={`/inspections/${insp.id}`}>
+                        <button className="btn btn-secondary text-sm flex-1 min-w-[80px]">View</button>
+                      </Link>
+                      {insp.status === 'IN_PROGRESS' && (
+                        <Link href={`/inspect/${equipment.id}`}>
+                          <button className="btn btn-warning text-sm flex-1 min-w-[120px]">Continue</button>
+                        </Link>
+                      )}
+                      <Link href={`/api/inspections/${insp.id}/pdf`}>
+                        <button className="btn btn-primary text-sm flex-1 min-w-[100px]">PDF</button>
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>
