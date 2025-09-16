@@ -9,12 +9,31 @@ async function getSpeechClient() {
     const { SpeechClient } = await import('@google-cloud/speech')
 
     // Prefer explicit JSON creds if provided
-    const jsonCreds = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
-    if (jsonCreds) {
-      const credentials = JSON.parse(jsonCreds)
+    const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+    if (raw) {
+      let credentials: any
+      try {
+        // Case 1: Inline JSON
+        if (raw.trim().startsWith('{')) {
+          credentials = JSON.parse(raw)
+        } else if (raw.includes('/') || raw.startsWith('.') || raw.match(/^[A-Za-z]:\\/)) {
+          // Case 2: File path
+          const fs = await import('node:fs/promises')
+          const content = await fs.readFile(raw, 'utf8')
+          credentials = JSON.parse(content)
+        } else {
+          // Case 3: Base64-encoded JSON
+          const decoded = Buffer.from(raw, 'base64').toString('utf8')
+          credentials = JSON.parse(decoded)
+        }
+      } catch (e) {
+        console.error('Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON value')
+        throw e
+      }
+      const projectId = process.env.GOOGLE_CLOUD_PROJECT || credentials.project_id
       speechClient = new SpeechClient({
         credentials,
-        projectId: process.env.GOOGLE_CLOUD_PROJECT || credentials.project_id,
+        projectId,
       } as any)
     } else {
       // Falls back to ADC (GOOGLE_APPLICATION_CREDENTIALS path or metadata)
