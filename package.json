@@ -18,7 +18,8 @@
     "next": "15.1.4",
     "pdf-lib": "^1.17.1",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "@google-cloud/speech": "^6.1.2"
   },
   "devDependencies": {
     "@types/node": "^20",

@@ -228,11 +228,8 @@ jobs:
           fi
           
           # Build completed successfully
-
-          # Apply DB migrations before starting app
-          docker compose -f docker-compose.postgres.yml run --rm app npx prisma migrate deploy
-
-          docker compose -f docker-compose.postgres.yml up -d
+          echo "🚀 Starting app..."
+          docker compose -f docker-compose.postgres.yml up -d --force-recreate --remove-orphans
           
           sleep 10
           echo "⏳ Almost ready..."
@@ -259,6 +256,8 @@ jobs:
           else
             echo "❌ Deployment failed!"
             echo "📋 Container logs:"
+            echo "📋 Recent app logs:"
+            docker compose -f docker-compose.postgres.yml logs --tail=200 app || true
             docker compose -f docker-compose.postgres.yml logs
             exit 1
           fi

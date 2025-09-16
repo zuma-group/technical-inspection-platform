@@ -179,14 +179,11 @@ jobs:
           fi
           echo "✅ Port 3002 is available"
           
-          # Rebuild and restart containers
-          echo "🔨 Building and starting containers..."
+          # Rebuild and start containers
+          echo "🔨 Building image..."
           docker compose -f docker-compose.postgres.yml build --no-cache
-
-          # Apply DB migrations before starting app
-          docker compose -f docker-compose.postgres.yml run --rm app npx prisma migrate deploy
-
-          docker compose -f docker-compose.postgres.yml up -d
+          echo "🚀 Starting app..."
+          docker compose -f docker-compose.postgres.yml up -d --force-recreate --remove-orphans
           
           # Clean up SSH key
           rm -f ~/.ssh/deploy_key
