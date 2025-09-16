@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('bcryptjs')
 const prisma = new PrismaClient()
 
 async function main() {
@@ -13,16 +14,31 @@ async function main() {
   await prisma.equipment.deleteMany()
   await prisma.user.deleteMany()
 
-  // Create default user
-  const user = await prisma.user.create({
+  // Create admin user
+  const adminPassword = await bcrypt.hash('admin123', 12)
+  const adminUser = await prisma.user.create({
+    data: {
+      email: 'zumadev2@zumasales.com',
+      name: 'System Administrator',
+      password: adminPassword,
+      role: 'ADMIN'
+    },
+  })
+
+  // Create default technician user
+  const techPassword = await bcrypt.hash('tech123', 12)
+  const techUser = await prisma.user.create({
     data: {
       email: 'tech@system.local',
       name: 'Field Technician',
+      password: techPassword,
       role: 'TECHNICIAN'
     },
   })
 
-  console.log('✅ Created default user')
+  console.log('✅ Created users:')
+  console.log(`   Admin: admin@system.local / admin123`)
+  console.log(`   Tech:  tech@system.local / tech123`)
 
   // Create default templates
   const boomLiftTemplate = await prisma.inspectionTemplate.create({
@@ -193,6 +209,9 @@ async function main() {
   console.log('✅ Created equipment')
 
   console.log('✅ Database seeded successfully!')
+  console.log('\n📋 Login credentials:')
+  console.log('   Admin: admin@system.local / admin123')
+  console.log('   Technician: tech@system.local / tech123')
 }
 
 main()
