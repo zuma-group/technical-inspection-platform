@@ -7,6 +7,9 @@ npx prisma generate >/dev/null 2>&1 || true
 if [ -n "$DATABASE_URL" ]; then
   echo "🗄️  Applying migrations (if any)..."
   npx prisma migrate deploy
+  
+  echo "🌱 Seeding database..."
+  npm run db:seed
 else
   echo "⚠️  DATABASE_URL is not set; skipping schema setup"
 fi
