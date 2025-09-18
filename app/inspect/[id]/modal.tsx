@@ -46,9 +46,11 @@ export default function CheckpointModal({
   const [isListening, setIsListening] = useState(false)
   const [speechSupported, setSpeechSupported] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
-    return typeof (window as any).SpeechRecognition !== 'undefined' || typeof (window as any).webkitSpeechRecognition !== 'undefined'
+    return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window
   })
   const recognitionRef = useRef<any>(null)
+  const micStreamRef = useRef<MediaStream | null>(null)
+  const streamActiveRef = useRef<boolean>(false)
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean
     media: Array<{ id: string; type: string }>
@@ -61,116 +63,105 @@ export default function CheckpointModal({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordedChunksRef = useRef<Blob[]>([])
 
-  // Initialize recognition lazily to avoid SSR issues
-  const ensureRecognition = () => {
-    if (!speechSupported) return null
-    if (recognitionRef.current) return recognitionRef.current
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) return null
-    const recognition = new SpeechRecognition()
-    recognition.lang = navigator.language || 'en-US'
-    recognition.interimResults = true
-    recognition.continuous = true
-    recognition.maxAlternatives = 1
-    recognition.onstart = () => setIsListening(true)
-    recognition.onend = () => {
-      setIsListening(false)
-      setInterimText('')
-    }
-    recognition.onerror = () => {
-      setIsListening(false)
-      setInterimText('')
-    }
-    recognition.onresult = (event: any) => {
-      let interim = ''
-      const finals: string[] = []
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript
-        if (event.results[i].isFinal) {
-          finals.push(transcript)
-        } else {
-          interim += transcript
-        }
-      }
-      if (finals.length > 0) {
-        const finalText = finals.join(' ').trim()
-        if (finalText) {
-          setNotes(prev => (prev ? prev + ' ' : '') + finalText)
-        }
-        setInterimText('')
-      } else {
-        setInterimText(interim.trim())
-      }
-    }
-    recognitionRef.current = recognition
-    return recognition
-  }
-
   const startDictation = () => {
-    // Always use Google STT for cross-browser support
-    startRecordingForCloud()
+    startRealtimeDictation()
   }
 
   const stopDictation = () => {
-    const rec = recognitionRef.current
-    if (rec && isListening) {
-      try { rec.stop() } catch {}
-    }
     setInterimText('')
-    stopRecordingForCloud()
+    stopRealtimeDictation()
   }
 
-  async function startRecordingForCloud() {
+  async function startRealtimeDictation() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      let chosenMime: string | undefined = undefined
-      if (typeof (window as any).MediaRecorder !== 'undefined') {
-        if ((window as any).MediaRecorder.isTypeSupported?.('audio/webm;codecs=opus')) {
-          chosenMime = 'audio/webm;codecs=opus'
-        } else if ((window as any).MediaRecorder.isTypeSupported?.('audio/ogg;codecs=opus')) {
-          chosenMime = 'audio/ogg;codecs=opus'
-        } else if ((window as any).MediaRecorder.isTypeSupported?.('audio/webm')) {
-          chosenMime = 'audio/webm'
-        } else if ((window as any).MediaRecorder.isTypeSupported?.('audio/ogg')) {
-          chosenMime = 'audio/ogg'
-        }
+      if (!speechSupported) {
+        throw new Error('Speech recognition not supported')
       }
-      const mr = new MediaRecorder(stream, chosenMime ? { mimeType: chosenMime } as any : undefined)
-      recordedChunksRef.current = []
-      mr.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordedChunksRef.current.push(e.data) }
-      mr.onstop = async () => {
-        const containerType = chosenMime?.split(';')[0] || 'audio/webm'
-        const blob = new Blob(recordedChunksRef.current, { type: containerType })
-        const formData = new FormData()
-        formData.append('audio', blob, 'recording')
-        formData.append('mimeType', containerType)
-        formData.append('languageCode', navigator.language || 'en-US')
-        try {
-          const res = await fetch('/api/speech-to-text', { method: 'POST', body: formData })
-          if (res.ok) {
-            const json = await res.json()
-            if (json.transcript) {
-              setNotes(prev => (prev ? prev + ' ' : '') + json.transcript)
-            }
-          }
-        } catch (e) {
-          console.error('Cloud STT failed', e)
-        }
-      }
-      mediaRecorderRef.current = mr
-      setIsListening(true)
-      mr.start()
-    } catch (e) {
-      console.error('Mic access failed', e)
-    }
-  }
 
-  function stopRecordingForCloud() {
-    const mr = mediaRecorderRef.current
-    if (mr && mr.state !== 'inactive') {
-      try { mr.stop() } catch {}
+      // Use Web Speech API
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      const recognition = new SpeechRecognition()
+      recognitionRef.current = recognition
+
+      recognition.continuous = true
+      recognition.interimResults = true
+      recognition.lang = 'en-US'
+
+      streamActiveRef.current = true
+      setIsListening(true)
+
+      recognition.onstart = () => {
+        console.log('Speech recognition started')
+        setIsListening(true)
+      }
+
+      recognition.onresult = (event: any) => {
+        let interimTranscript = ''
+        let finalTranscript = ''
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript
+          } else {
+            interimTranscript += transcript
+          }
+        }
+
+        setInterimText(interimTranscript)
+
+        if (finalTranscript) {
+          setNotes(prev => (prev ? prev + ' ' : '') + finalTranscript.trim())
+        }
+      }
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error)
+        setIsListening(false)
+        streamActiveRef.current = false
+      }
+
+      recognition.onend = () => {
+        console.log('Speech recognition ended')
+        if (streamActiveRef.current) {
+          // Restart recognition if still active
+          try {
+            recognition.start()
+          } catch (error) {
+            console.error('Failed to restart recognition:', error)
+            setIsListening(false)
+            streamActiveRef.current = false
+          }
+        } else {
+          setIsListening(false)
+        }
+      }
+
+      recognition.start()
+
+    } catch (error) {
+      console.error('Failed to start dictation:', error)
       setIsListening(false)
     }
+  }
+
+  function teardownAudioGraph() {
+    // Stop speech recognition
+    try {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
+    } catch {}
+
+    // Clean up references
+    recognitionRef.current = null
+  }
+
+  function stopRealtimeDictation() {
+    streamActiveRef.current = false
+    teardownAudioGraph()
+    setIsListening(false)
+    setInterimText('')
   }
 
   if (!isOpen) return null
