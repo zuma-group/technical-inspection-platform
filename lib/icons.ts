@@ -51,7 +51,8 @@ import {
   FileVideo,
   ExternalLink,
   Copy,
-  Clipboard
+  Clipboard,
+  Mail
 } from 'lucide-react';
 import { Mic, MicOff } from 'lucide-react';
 
@@ -124,6 +125,7 @@ export const Icons = {
   loader: Loader2,
   mic: Mic,
   micOff: MicOff,
+  mail: Mail,
 };
 
 // Consistent sizing classes

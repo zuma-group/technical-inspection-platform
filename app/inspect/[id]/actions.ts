@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { sendEmailWithPdf } from '@/lib/email'
+import { getInspectionForPDF, generateInspectionPDF, generateEmailContent } from '@/lib/pdf-generator'
 
 export async function updateCheckpoint(
   checkpointId: string, 
@@ -137,87 +137,20 @@ export async function completeInspection(inspectionId: string) {
     
     // Generate PDF report and send email (best-effort; non-blocking failure)
     try {
-      const finalInspection = await prisma.inspection.findUnique({
-        where: { id: inspectionId },
-        include: {
-          equipment: true,
-          technician: { select: { name: true, email: true } },
-          sections: {
-            orderBy: { order: 'asc' },
-            include: { checkpoints: { orderBy: { order: 'asc' } } }
-          }
-        }
-      })
+      const finalInspection = await getInspectionForPDF(inspectionId)
 
       if (finalInspection) {
-        const pdfDoc = await PDFDocument.create()
-        const pageMargin = 50
-        const pageWidth = 612
-        const pageHeight = 792
-        const titleFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-        const bodyFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
-
-        const addPage = () => pdfDoc.addPage([pageWidth, pageHeight])
-        let page = addPage()
-        let y = pageHeight - pageMargin
-
-        const drawText = (text: string, options?: { size?: number; font?: any; color?: any }) => {
-          const size = options?.size ?? 12
-          const font = options?.font ?? bodyFont
-          const color = options?.color ?? rgb(0, 0, 0)
-          const maxWidth = pageWidth - pageMargin * 2
-          const words = text.split(' ')
-          let line = ''
-          const lines: string[] = []
-          for (const w of words) {
-            const test = line ? line + ' ' + w : w
-            const width = font.widthOfTextAtSize(test, size)
-            if (width > maxWidth) {
-              if (line) lines.push(line)
-              line = w
-            } else {
-              line = test
-            }
-          }
-          if (line) lines.push(line)
-          for (const l of lines) {
-            if (y - size < pageMargin) {
-              page = addPage()
-              y = pageHeight - pageMargin
-            }
-            page.drawText(l, { x: pageMargin, y, size, font, color })
-            y -= size + 4
-          }
-        }
-
-        drawText('Inspection Report', { size: 20, font: titleFont })
-        y -= 6
-        drawText(`Equipment: ${finalInspection.equipment.model} (${finalInspection.equipment.serial})`)
-        drawText(`Date: ${new Date(finalInspection.startedAt).toLocaleString()}`)
-        drawText(`Status: ${finalInspection.status.replace(/_/g, ' ')}`)
-        drawText(`Technician: ${finalInspection.technician?.name || 'N/A'}`)
-        y -= 8
-
-        for (const section of finalInspection.sections) {
-          y -= 6
-          drawText(section.name, { size: 14, font: titleFont })
-          for (const cp of section.checkpoints) {
-            const statusText = cp.status ?? 'N/A'
-            const critical = cp.critical ? ' (CRITICAL)' : ''
-            drawText(`• [${statusText}] ${cp.name}${critical}`)
-            if (cp.notes) drawText(`   Notes: ${cp.notes}`)
-          }
-        }
-
-        const pdfBytes = await pdfDoc.save()
+        const pdfBytes = await generateInspectionPDF(finalInspection)
+        const emailContent = generateEmailContent(finalInspection)
 
         const toEmail = process.env.REPORT_FALLBACK_EMAIL
         if (toEmail) {
           const info = await sendEmailWithPdf({
             to: toEmail,
-            subject: `Inspection Report - ${finalInspection.equipment.model} (${finalInspection.equipment.serial})`,
-            text: 'Please find the attached inspection report PDF.',
-            pdf: { filename: `inspection-${finalInspection.id}.pdf`, content: Buffer.from(pdfBytes) }
+            subject: emailContent.subject,
+            html: emailContent.html,
+            text: emailContent.text,
+            pdf: { filename: emailContent.filename, content: Buffer.from(pdfBytes) }
           })
           console.log('📧 Inspection report email queued', {
             to: toEmail,
