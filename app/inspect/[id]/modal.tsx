@@ -37,20 +37,11 @@ export default function CheckpointModal({
 }: ModalProps) {
   const [currentStatus, setCurrentStatus] = useState(existingData?.status || status)
   const [notes, setNotes] = useState(existingData?.notes || '')
-  const [interimText, setInterimText] = useState('')
   const [estimatedHours, setEstimatedHours] = useState(existingData?.estimatedHours?.toString() || '')
   const [mediaFiles, setMediaFiles] = useState<File[]>([])
   const [mediaPreviews, setMediaPreviews] = useState<string[]>([])
   const [existingMedia, setExistingMedia] = useState(existingData?.media || [])
   const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([])
-  const [isListening, setIsListening] = useState(false)
-  const [speechSupported, setSpeechSupported] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
-    return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window
-  })
-  const recognitionRef = useRef<any>(null)
-  const micStreamRef = useRef<MediaStream | null>(null)
-  const streamActiveRef = useRef<boolean>(false)
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean
     media: Array<{ id: string; type: string }>
@@ -60,109 +51,7 @@ export default function CheckpointModal({
   const videoInputRef = useRef<HTMLInputElement>(null)
   const uploadPhotoRef = useRef<HTMLInputElement>(null)
   const uploadVideoRef = useRef<HTMLInputElement>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const recordedChunksRef = useRef<Blob[]>([])
-
-  const startDictation = () => {
-    startRealtimeDictation()
-  }
-
-  const stopDictation = () => {
-    setInterimText('')
-    stopRealtimeDictation()
-  }
-
-  async function startRealtimeDictation() {
-    try {
-      if (!speechSupported) {
-        throw new Error('Speech recognition not supported')
-      }
-
-      // Use Web Speech API
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-      const recognition = new SpeechRecognition()
-      recognitionRef.current = recognition
-
-      recognition.continuous = true
-      recognition.interimResults = true
-      recognition.lang = 'en-US'
-
-      streamActiveRef.current = true
-      setIsListening(true)
-
-      recognition.onstart = () => {
-        console.log('Speech recognition started')
-        setIsListening(true)
-      }
-
-      recognition.onresult = (event: any) => {
-        let interimTranscript = ''
-        let finalTranscript = ''
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript
-          } else {
-            interimTranscript += transcript
-          }
-        }
-
-        setInterimText(interimTranscript)
-
-        if (finalTranscript) {
-          setNotes(prev => (prev ? prev + ' ' : '') + finalTranscript.trim())
-        }
-      }
-
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error)
-        setIsListening(false)
-        streamActiveRef.current = false
-      }
-
-      recognition.onend = () => {
-        console.log('Speech recognition ended')
-        if (streamActiveRef.current) {
-          // Restart recognition if still active
-          try {
-            recognition.start()
-          } catch (error) {
-            console.error('Failed to restart recognition:', error)
-            setIsListening(false)
-            streamActiveRef.current = false
-          }
-        } else {
-          setIsListening(false)
-        }
-      }
-
-      recognition.start()
-
-    } catch (error) {
-      console.error('Failed to start dictation:', error)
-      setIsListening(false)
-    }
-  }
-
-  function teardownAudioGraph() {
-    // Stop speech recognition
-    try {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop()
-      }
-    } catch {}
-
-    // Clean up references
-    recognitionRef.current = null
-  }
-
-  function stopRealtimeDictation() {
-    streamActiveRef.current = false
-    teardownAudioGraph()
-    setIsListening(false)
-    setInterimText('')
-  }
+  
 
   if (!isOpen) return null
 
@@ -194,7 +83,6 @@ export default function CheckpointModal({
 
   const handleSubmit = () => {
     // Ensure we stop listening before submit
-    stopDictation()
     const data = {
       status: currentStatus,
       notes,
@@ -452,34 +340,10 @@ export default function CheckpointModal({
           <label className="block text-sm font-semibold mb-2">
             {currentStatus === 'CORRECTED' ? 'What was corrected?' : 'What needs to be done?'}
           </label>
-          <div className="flex items-center gap-2 mb-2">
-            <button
-              type="button"
-              onClick={() => (isListening ? stopDictation() : startDictation())}
-              disabled={!speechSupported}
-              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm ${
-                isListening
-                  ? 'bg-red-500 text-white border-red-600 hover:bg-red-600'
-                  : speechSupported
-                    ? 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
-                    : 'bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed'
-              }`}
-              title={speechSupported ? (isListening ? 'Stop dictation' : 'Start dictation') : 'Speech recognition not supported'}
-            >
-              {isListening
-                ? (Icons.micOff ? <Icons.micOff className={iconSizes.sm} /> : <span>●</span>)
-                : (Icons.mic ? <Icons.mic className={iconSizes.sm} /> : <span>🎤</span>)}
-              <span>{isListening ? 'Stop' : 'Dictate'}</span>
-            </button>
-            {!speechSupported && (
-              <span className="text-xs text-gray-500">Voice input not supported in this browser</span>
-            )}
-          </div>
           <textarea
-            value={notes + (isListening && interimText ? (notes ? ' ' : '') + interimText : '')}
+            value={notes}
             onChange={(e) => {
               setNotes(e.target.value)
-              setInterimText('')
             }}
             rows={4}
             className="form-textarea"
