@@ -56,6 +56,8 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   let y = pageHeight - pageMargin
 
   // Enhanced text drawing with better spacing and alignment options
+  const sanitize = (s: string) => (s ?? '').toString().replace(/[\t\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim()
+
   const drawText = (text: string, options?: { 
     size?: number; 
     font?: any; 
@@ -71,7 +73,7 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
     const lineHeight = options?.lineHeight ?? 1.3
     const indent = options?.indent ?? 0
     const maxWidth = contentWidth - indent
-    const words = text.split(' ')
+    const words = sanitize(text).split(' ')
     let line = ''
     const lines: string[] = []
     

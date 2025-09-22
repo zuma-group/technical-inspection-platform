@@ -229,9 +229,8 @@ jobs:
           
           # Build completed successfully
 
-          # Run Prisma migrations on the server using the freshly built app image
-          echo "🗄️  Applying Prisma migrations..."
-          docker compose -f docker-compose.postgres.yml run --rm app npx prisma migrate deploy
+          # Migrations handled by container entrypoint now
+          echo "🗄️  Skipping CI-side migrations; entrypoint will apply them"
 
           echo "🚀 Starting app..."
           # Use --no-recreate to avoid stopping if already running; then ensure it's up
