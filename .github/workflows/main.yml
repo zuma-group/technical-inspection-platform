@@ -228,6 +228,11 @@ jobs:
           fi
           
           # Build completed successfully
+
+          # Run Prisma migrations on the server using the freshly built app image
+          echo "🗄️  Applying Prisma migrations..."
+          docker compose -f docker-compose.postgres.yml run --rm app npx prisma migrate deploy
+
           echo "🚀 Starting app..."
           docker compose -f docker-compose.postgres.yml up -d --force-recreate --remove-orphans
           
