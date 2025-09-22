@@ -95,6 +95,47 @@ npm run start                # Start production server
 ## Project Structure
 
 ```
+
+# Technical Inspection Platform - S3 Video Uploads
+
+Environment variables required for S3 uploads (add to `.env.local` or environment):
+
+```
+S3_BUCKET=
+S3_REGION=
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+# Optional for S3-compatible providers:
+S3_ENDPOINT=
+S3_FORCE_PATH_STYLE=true
+
+# Used for generating absolute media links in emails/PDF:
+NEXT_PUBLIC_SITE_URL=
+```
+
+Commands:
+
+```
+npm install
+npm run db:push
+```
+
+CloudFront (optional but recommended):
+
+```
+# CloudFront distribution domain (without protocol)
+CLOUDFRONT_DOMAIN=
+
+# For signed URLs (private distributions)
+CLOUDFRONT_KEY_ID=
+CLOUDFRONT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# Notes:
+# - Keep S3 bucket private and grant CloudFront access via OAC/OAI.
+# - Uploads still go directly to S3 (presigned POST). Downloads are served via CloudFront through /api/media/[id].
+# - If KEY_ID and PRIVATE_KEY are set, media GETs will redirect to CloudFront signed URLs; otherwise public CF URL.
+```
+
 app/
 ├── page.tsx                 # Equipment list (server component)
 ├── inspect/[id]/

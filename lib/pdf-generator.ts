@@ -582,6 +582,26 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
 }
 
 export function generateEmailContent(inspection: InspectionData) {
+  // Build a simple list of video links
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'http://localhost:3000'
+  const videoLinks: Array<{ filename: string; url: string }> = []
+  for (const section of inspection.sections) {
+    for (const cp of section.checkpoints) {
+      for (const m of (cp.media || [])) {
+        if (m.type === 'video') {
+          videoLinks.push({ filename: m.filename, url: `${siteUrl}/api/media/${m.id}` })
+        }
+      }
+    }
+  }
+
+  const videosHtml = videoLinks.length
+    ? `<h3>Attached Videos</h3><ul>${videoLinks.map(v => `<li><a href="${v.url}">${v.filename}</a></li>`).join('')}</ul>`
+    : ''
+  const videosText = videoLinks.length
+    ? `\nVideos:\n${videoLinks.map(v => `- ${v.filename}: ${v.url}`).join('\n')}`
+    : ''
+
   return {
     subject: `Inspection Report - ${inspection.equipment.model} (${inspection.equipment.serial})`,
     html: `
@@ -594,9 +614,10 @@ export function generateEmailContent(inspection: InspectionData) {
         <li><strong>Status:</strong> ${inspection.status.replace(/_/g, ' ')}</li>
         <li><strong>Technician:</strong> ${inspection.technician?.name || 'N/A'}</li>
       </ul>
+      ${videosHtml}
       <p>This report was generated automatically by the Technical Inspection Platform.</p>
     `,
-    text: `Inspection Report - ${inspection.equipment.model} (${inspection.equipment.serial})\n\nPlease find the attached inspection report PDF.`,
+    text: `Inspection Report - ${inspection.equipment.model} (${inspection.equipment.serial})\n\nPlease find the attached inspection report PDF.${videosText}`,
     filename: `inspection-${inspection.id}.pdf`
   }
 }

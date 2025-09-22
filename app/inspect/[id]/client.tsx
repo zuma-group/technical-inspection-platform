@@ -30,6 +30,8 @@ export default function InspectionClient({ inspection }) {
       media?: Array<{ id: string; type: string }>
     }
   } | null>(null)
+  const [uploadingByCheckpoint, setUploadingByCheckpoint] = useState<Record<string, boolean>>({})
+  const [uploadProgressByCheckpoint, setUploadProgressByCheckpoint] = useState<Record<string, number>>({})
   const [checkpoints, setCheckpoints] = useState(() => {
     const map = {}
     inspection.sections.forEach(section => {
@@ -49,6 +51,7 @@ export default function InspectionClient({ inspection }) {
   const totalCheckpoints = inspection.sections.reduce((sum, s) => sum + s.checkpoints.length, 0)
   const completedCheckpoints = Object.values(checkpoints).filter((cp: { status: string | null }) => cp.status).length
   const progress = (completedCheckpoints / totalCheckpoints) * 100
+  const isAnyUploading = Object.values(uploadingByCheckpoint).some(Boolean)
 
   const handleCheckpoint = (checkpointId: string, checkpointName: string, status: string) => {
     if (status === 'PASS' || status === 'NOT_APPLICABLE') {
@@ -94,15 +97,23 @@ export default function InspectionClient({ inspection }) {
       }
     }))
 
-    // Close modal
+    // Capture values needed before closing modal
+    const captured = {
+      checkpointId: modalState.checkpointId,
+      existingMedia: modalState.existingData?.media as Array<{ id: string }> | undefined
+    }
+    // Close modal quickly for UX
     setModalState(null)
 
-    startTransition(async () => {
+    // Do network work outside of startTransition so global isPending doesn't block UI
+    try {
+      setUploadingByCheckpoint(prev => ({ ...prev, [captured.checkpointId]: true }))
+      setUploadProgressByCheckpoint(prev => ({ ...prev, [captured.checkpointId]: 0 }))
       const shouldClearData = data.status === 'PASS' || data.status === 'NOT_APPLICABLE'
       
       // If changing to PASS or N/A, delete all existing media
-      if (shouldClearData && modalState.existingData?.media) {
-        for (const media of modalState.existingData.media) {
+      if (shouldClearData && captured.existingMedia) {
+        for (const media of captured.existingMedia) {
           await fetch(`/api/media/${media.id}`, {
             method: 'DELETE'
           })
@@ -111,26 +122,110 @@ export default function InspectionClient({ inspection }) {
         // Otherwise handle media normally
         // Upload new media if any
         if (data.media.length > 0) {
-          const formData = new FormData()
-          formData.append('checkpointId', modalState.checkpointId)
-          data.media.forEach(file => {
-            formData.append('files', file)
-          })
-          
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-          })
-          
-          if (response.ok) {
-            const { media } = await response.json()
-            setCheckpoints(prev => ({
-              ...prev,
-              [modalState.checkpointId]: {
-                ...prev[modalState.checkpointId],
-                media: [...prev[modalState.checkpointId].media, ...media]
+          const photos = data.media.filter(f => f.type.startsWith('image'))
+          const videos = data.media.filter(f => f.type.startsWith('video'))
+
+          // Upload photos via existing API (stored in DB)
+          if (photos.length > 0) {
+            const formData = new FormData()
+            formData.append('checkpointId', captured.checkpointId)
+            photos.forEach(file => {
+              formData.append('files', file)
+            })
+            const response = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData
+            })
+            if (response.ok) {
+              const { media } = await response.json()
+              setCheckpoints(prev => ({
+                ...prev,
+                [modalState.checkpointId]: {
+                  ...prev[modalState.checkpointId],
+                  media: [...prev[modalState.checkpointId].media, ...media]
+                }
+              }))
+            }
+          }
+
+          // Upload videos to S3 via presigned POST, then finalize
+          for (const file of videos) {
+            try {
+              const presignRes = await fetch('/api/upload/presign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  checkpointId: captured.checkpointId,
+                  filename: file.name,
+                  contentType: file.type
+                })
+              })
+              if (!presignRes.ok) continue
+              const { upload, key } = await presignRes.json()
+
+              const s3Form = new FormData()
+              Object.entries(upload.fields).forEach(([k, v]) => {
+                s3Form.append(k, v as any)
+              })
+              s3Form.append('file', file)
+
+              // Upload with progress using XHR; fall back to fetch if needed
+              const s3Posted = await new Promise<boolean>((resolve) => {
+                try {
+                  const xhr = new XMLHttpRequest()
+                  xhr.open('POST', upload.url, true)
+                  xhr.upload.onprogress = (evt) => {
+                    if (evt.lengthComputable) {
+                      const percent = Math.round((evt.loaded / evt.total) * 100)
+                      setUploadProgressByCheckpoint(prev => ({ ...prev, [captured.checkpointId]: percent }))
+                    } else {
+                      setUploadProgressByCheckpoint(prev => ({ ...prev, [captured.checkpointId]: 50 }))
+                    }
+                  }
+                  xhr.onload = () => {
+                    // S3 may return 204/201/200
+                    resolve(xhr.status >= 200 && xhr.status < 300)
+                  }
+                  xhr.onerror = () => resolve(false)
+                  xhr.timeout = 0
+                  xhr.send(s3Form as any)
+                } catch (e) {
+                  resolve(false)
+                }
+              })
+
+              if (!s3Posted) {
+                // As a last resort, try fetch no-cors so we don't block the flow
+                try {
+                  await fetch(upload.url, { method: 'POST', body: s3Form, mode: 'no-cors' })
+                } catch {}
               }
-            }))
+
+              const finalizeRes = await fetch('/api/upload/finalize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  checkpointId: captured.checkpointId,
+                  key,
+                  filename: file.name,
+                  mimeType: file.type,
+                  size: file.size
+                })
+              })
+              if (finalizeRes.ok) {
+                const { media } = await finalizeRes.json()
+                setCheckpoints(prev => ({
+                  ...prev,
+                  [captured.checkpointId]: {
+                    ...prev[captured.checkpointId],
+                    media: [...prev[captured.checkpointId].media, media]
+                  }
+                }))
+                setUploadProgressByCheckpoint(prev => ({ ...prev, [captured.checkpointId]: 100 }))
+              }
+            } catch (e) {
+              console.error('Video upload failed', e)
+            }
           }
         }
 
@@ -144,8 +239,8 @@ export default function InspectionClient({ inspection }) {
           // Update local state to remove deleted media
           setCheckpoints(prev => ({
             ...prev,
-            [modalState.checkpointId]: {
-              ...prev[modalState.checkpointId],
+            [captured.checkpointId]: {
+              ...prev[captured.checkpointId],
               media: prev[modalState.checkpointId].media.filter(
                 (m: { id: string }) => !data.removedMediaIds?.includes(m.id)
               )
@@ -153,19 +248,32 @@ export default function InspectionClient({ inspection }) {
           }))
         }
       }
-
-      // Update checkpoint in database
-      // Clear notes and hours for PASS and N/A statuses
+      
+      // Update checkpoint in database (small transition OK)
       await updateCheckpoint(
-        modalState.checkpointId, 
-        data.status, 
+        captured.checkpointId,
+        data.status,
         shouldClearData ? null : data.notes,
         shouldClearData ? null : data.estimatedHours
       )
-    })
+    } finally {
+      setUploadingByCheckpoint(prev => ({ ...prev, [captured.checkpointId]: false }))
+      // Clear progress indicator shortly after
+      setTimeout(() => {
+        setUploadProgressByCheckpoint(prev => {
+          const copy = { ...prev }
+          delete copy[captured.checkpointId]
+          return copy
+        })
+      }, 1000)
+    }
   }
 
   const handleComplete = async () => {
+    if (isAnyUploading) {
+      alert('Please wait for all uploads to finish before completing the inspection.')
+      return
+    }
     if (completedCheckpoints !== totalCheckpoints) {
       alert(`Please complete all checkpoints (${completedCheckpoints}/${totalCheckpoints})`)
       return
@@ -412,7 +520,7 @@ export default function InspectionClient({ inspection }) {
             </button>
             <button
               onClick={handleComplete}
-              disabled={completedCheckpoints < totalCheckpoints || isPending}
+              disabled={completedCheckpoints < totalCheckpoints || isPending || isAnyUploading}
               className="btn btn-primary w-full mb-2 text-sm"
             >
               Complete Inspection ({completedCheckpoints}/{totalCheckpoints})
@@ -478,7 +586,8 @@ export default function InspectionClient({ inspection }) {
                           }
                         })
                       }}
-                      className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-semibold"
+                      disabled={!!uploadingByCheckpoint[checkpoint.id]}
+                      className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-semibold disabled:opacity-60"
                     >
                       Edit
                     </button>
@@ -528,37 +637,64 @@ export default function InspectionClient({ inspection }) {
                       ))}
                     </div>
                   )}
+
+                  {uploadProgressByCheckpoint[checkpoint.id] !== undefined && (
+                    <div className="mt-3">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full bg-blue-600 transition-all"
+                          style={{ width: `${uploadProgressByCheckpoint[checkpoint.id]}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1 text-center">
+                        Uploading... {uploadProgressByCheckpoint[checkpoint.id]}%
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'PASS')}
                     className="bg-green-500 text-white min-h-[60px] text-base font-bold py-4 px-2 rounded-lg border-2 border-green-600 shadow-lg hover:bg-green-600 active:bg-green-700 disabled:opacity-60 transition-all"
-                    disabled={isPending}
+                    disabled={!!uploadingByCheckpoint[checkpoint.id]}
                   >
                     PASS
                   </button>
                   <button
                     onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'CORRECTED')}
                     className="bg-yellow-500 text-gray-900 min-h-[60px] text-base font-bold py-4 px-1 rounded-lg border-2 border-yellow-600 shadow-lg hover:bg-yellow-400 active:bg-yellow-600 disabled:opacity-60 transition-all"
-                    disabled={isPending}
+                    disabled={!!uploadingByCheckpoint[checkpoint.id]}
                   >
                     FIXED
                   </button>
                   <button
                     onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'ACTION_REQUIRED')}
                     className="bg-red-500 text-white min-h-[60px] text-base font-bold py-4 px-1 rounded-lg border-2 border-red-600 shadow-lg hover:bg-red-600 active:bg-red-700 disabled:opacity-60 transition-all"
-                    disabled={isPending}
+                    disabled={!!uploadingByCheckpoint[checkpoint.id]}
                   >
                     ACTION
                   </button>
                   <button
                     onClick={() => handleCheckpoint(checkpoint.id, checkpoint.name, 'NOT_APPLICABLE')}
                     className="bg-gray-500 text-white min-h-[60px] text-base font-bold py-4 px-1 rounded-lg border-2 border-gray-600 shadow-lg hover:bg-gray-600 active:bg-gray-700 disabled:opacity-60 transition-all"
-                    disabled={isPending}
+                    disabled={!!uploadingByCheckpoint[checkpoint.id]}
                   >
                     N/A
                   </button>
+                  {uploadProgressByCheckpoint[checkpoint.id] !== undefined && (
+                    <div className="col-span-2 mt-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full bg-blue-600 transition-all"
+                          style={{ width: `${uploadProgressByCheckpoint[checkpoint.id]}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1 text-center">
+                        Uploading... {uploadProgressByCheckpoint[checkpoint.id]}%
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
                 </div>
