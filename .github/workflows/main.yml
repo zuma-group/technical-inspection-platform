@@ -234,7 +234,8 @@ jobs:
           docker compose -f docker-compose.postgres.yml run --rm app npx prisma migrate deploy
 
           echo "🚀 Starting app..."
-          docker compose -f docker-compose.postgres.yml up -d --force-recreate --remove-orphans
+          # Use --no-recreate to avoid stopping if already running; then ensure it's up
+          docker compose -f docker-compose.postgres.yml up -d --remove-orphans
           
           sleep 10
           echo "⏳ Almost ready..."
