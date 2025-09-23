@@ -127,8 +127,8 @@ export default async function EquipmentDetailPage({
                     return (
                       <tr key={insp.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
                         <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>
-                          <div>{new Date(insp.startedAt).toLocaleDateString()}</div>
-                          <div className="text-xs text-gray-500 mt-1">{new Date(insp.startedAt).toLocaleTimeString()}</div>
+                          <div>{require('@/lib/time').formatPDTDate(insp.startedAt)}</div>
+                          <div className="text-xs text-gray-500 mt-1">{require('@/lib/time').formatPDTTime(insp.startedAt)}</div>
                         </td>
                         <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>
                           <div className="mb-2">{insp.status.replace(/_/g, ' ')}</div>
@@ -183,7 +183,7 @@ export default async function EquipmentDetailPage({
                   <div key={insp.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex justify-between items-start mb-3">
                       <div className="text-sm font-medium text-gray-900">
-                        {new Date(insp.startedAt).toLocaleDateString()}
+                        {require('@/lib/time').formatPDTDate(insp.startedAt)}
                       </div>
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                         insp.status === 'IN_PROGRESS' ? 'bg-yellow-100 text-yellow-800' :

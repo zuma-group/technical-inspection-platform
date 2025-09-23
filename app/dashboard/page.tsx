@@ -230,7 +230,7 @@ export default async function DashboardPage() {
                           </div>
                         </td>
                         <td style={{ padding: '12px' }}>
-                          {new Date(inspection.startedAt).toLocaleDateString()}
+                          {require('@/lib/time').formatPDTDate(inspection.startedAt)}
                         </td>
                         <td style={{ padding: '12px' }}>
                           <span className={`status-badge ${

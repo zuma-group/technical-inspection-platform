@@ -65,7 +65,7 @@ export default async function InspectionDetailPage({
           {inspection.equipment.model} • {inspection.equipment.serial}
         </p>
         <p className="text-sm text-gray-600 mt-1">
-          {new Date(inspection.startedAt).toLocaleString()} • Status: {inspection.status.replace(/_/g, ' ')}
+          {require('@/lib/time').formatPDTDateTime(inspection.startedAt)} • Status: {inspection.status.replace(/_/g, ' ')}
         </p>
       </div>
 

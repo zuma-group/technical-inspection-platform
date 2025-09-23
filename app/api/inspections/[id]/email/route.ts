@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sendEmailWithPdf } from '@/lib/email'
-import { getInspectionForPDF, generateInspectionPDF, generateEmailContent } from '@/lib/pdf-generator'
+import { sendEmailWithPdf, generateEmailContent } from '@/lib/email'
+import { getInspectionForPDF, generateInspectionPDF } from '@/lib/pdf-generator'
 
 export const dynamic = 'force-dynamic'
 

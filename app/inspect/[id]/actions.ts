@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { sendEmailWithPdf } from '@/lib/email'
-import { getInspectionForPDF, generateInspectionPDF, generateEmailContent } from '@/lib/pdf-generator'
+import { sendEmailWithPdf, generateEmailContent } from '@/lib/email'
+import { getInspectionForPDF, generateInspectionPDF } from '@/lib/pdf-generator'
 
 export async function updateCheckpoint(
   checkpointId: string, 

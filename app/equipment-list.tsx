@@ -92,7 +92,7 @@ export default function EquipmentList({ equipment }: { equipment: any[] }) {
                 ) : item.lastCompletedInspection && (
                   <div className="flex items-center gap-2 text-green-600">
                     <Icons.checkCircle className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm">Last: {new Date(item.lastCompletedInspection.completedAt || item.lastCompletedInspection.startedAt).toLocaleDateString()}</span>
+                    <span className="text-sm">Last: {require('@/lib/time').formatPDTDate(item.lastCompletedInspection.completedAt || item.lastCompletedInspection.startedAt)}</span>
                   </div>
                 )}
               </div>
