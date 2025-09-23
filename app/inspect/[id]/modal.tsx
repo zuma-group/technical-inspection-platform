@@ -334,11 +334,15 @@ export default function CheckpointModal({
           )}
         </div>
 
-        {/* Notes field - show for CORRECTED and ACTION_REQUIRED */}
-        {(currentStatus === 'CORRECTED' || currentStatus === 'ACTION_REQUIRED') && (
+        {/* Notes field - show for PASS, CORRECTED and ACTION_REQUIRED (optional for PASS) */}
+        {(currentStatus === 'PASS' || currentStatus === 'CORRECTED' || currentStatus === 'ACTION_REQUIRED') && (
         <div className="mb-5">
           <label className="block text-sm font-semibold mb-2">
-            {currentStatus === 'CORRECTED' ? 'What was corrected?' : 'What needs to be done?'}
+            {currentStatus === 'CORRECTED'
+              ? 'What was corrected?'
+              : currentStatus === 'ACTION_REQUIRED'
+              ? 'What needs to be done?'
+              : 'Notes (optional)'}
           </label>
           <textarea
             value={notes}
@@ -348,8 +352,10 @@ export default function CheckpointModal({
             rows={4}
             className="form-textarea"
             placeholder={currentStatus === 'CORRECTED' 
-              ? 'Describe what was corrected...' 
-              : 'Describe the problem and solution needed...'}
+              ? 'Describe what was corrected...'
+              : currentStatus === 'ACTION_REQUIRED'
+              ? 'Describe the problem and solution needed...'
+              : 'Add any notes...'}
           />
         </div>
         )}
