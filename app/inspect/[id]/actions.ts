@@ -137,7 +137,7 @@ export async function completeInspection(inspectionId: string) {
 	
 	// Notify external system after completion (best-effort; non-blocking failure)
 	try {
-		const taskId = (inspection as any).taskId
+		const taskId = (inspection as any).taskId || (inspection as any).equipment?.taskId
 		if (taskId) {
 			const response = await fetch('https://staging.zuma.odolution.com/api/get_task_files', {
 				method: 'POST',

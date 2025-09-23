@@ -142,6 +142,8 @@ async function getOrCreateInspection(
         equipmentId,
         technicianId: user.id,
         status: 'IN_PROGRESS',
+        taskId: taskId || (equipment as any).taskId || null,
+        serialNumber: serialNumber || null,
         sections: {
           create: sections.map((section, idx) => ({
             name: section.name,
@@ -155,7 +157,7 @@ async function getOrCreateInspection(
             },
           })),
         },
-      },
+      } as any,
       include: {
         equipment: true,
         sections: {
