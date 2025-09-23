@@ -134,6 +134,28 @@ export async function completeInspection(inspectionId: string) {
     
     console.log('Transaction complete. Inspection status:', updatedInspection.status)
     console.log('Equipment status:', updatedEquipment.status)
+	
+	// Notify external system after completion (best-effort; non-blocking failure)
+	try {
+		const taskId = (inspection as any).taskId
+		if (taskId) {
+			const response = await fetch('https://staging.zuma.odolution.com/api/get_task_files', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ task_id: String(taskId) }),
+				cache: 'no-store'
+			})
+			if (!response.ok) {
+				console.error('Failed to call get_task_files endpoint', { status: response.status, statusText: response.statusText })
+			} else {
+				console.log('Called get_task_files endpoint successfully for taskId:', String(taskId))
+			}
+		} else {
+			console.warn('Inspection has no taskId; skipping get_task_files call')
+		}
+	} catch (externalErr) {
+		console.error('Error calling external get_task_files endpoint:', externalErr)
+	}
     
     // Generate PDF report and send email (best-effort; non-blocking failure)
     try {
