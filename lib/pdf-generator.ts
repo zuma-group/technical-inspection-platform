@@ -347,13 +347,19 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   drawSectionHeader('Inspection Overview')
   
   // Equipment info in a clean table-like format
-  const overviewData = [
+  const taskId = (inspection as any).taskId || (inspection as any).equipment?.taskId
+  let overviewData = [
     ['Equipment Model:', inspection.equipment.model],
     ['Serial Number:', inspection.equipment.serial],
-    ['Inspection Date:', new Date(inspection.startedAt).toLocaleString()],
+    ['Inspection Date:', require('./time').formatPDTDateTime(inspection.startedAt)],
     ['Current Status:', inspection.status.replace(/_/g, ' ').toUpperCase()],
     ['Technician:', inspection.technician?.name || 'Not Assigned'],
   ]
+
+  // Insert Task ID after Serial Number if available
+  if (taskId) {
+    overviewData.splice(2, 0, ['Task ID:', String(taskId)])
+  }
 
   for (const [label, value] of overviewData) {
     const currentY = y
@@ -547,7 +553,7 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   // Add page numbers and footer to all pages
   const pages = pdfDoc.getPages()
   const totalPages = pages.length
-  const footerText = `Generated on ${new Date().toLocaleString()} | Technical Inspection Platform`
+  const footerText = `Generated on ${require('./time').formatPDTDateTime(new Date())} | Technical Inspection Platform`
   
   pages.forEach((currentPage, index) => {
     const pageNumber = index + 1
@@ -581,47 +587,6 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   })
 
   return await pdfDoc.save()
-}
-
-export function generateEmailContent(inspection: InspectionData) {
-  // Build a simple list of video links
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'http://localhost:3000'
-  const videoLinks: Array<{ filename: string; url: string }> = []
-  for (const section of inspection.sections) {
-    for (const cp of section.checkpoints) {
-      for (const m of (cp.media || [])) {
-        if (m.type === 'video') {
-          videoLinks.push({ filename: m.filename, url: `${siteUrl}/api/media/${m.id}` })
-        }
-      }
-    }
-  }
-
-  const videosHtml = videoLinks.length
-    ? `<h3>Attached Videos</h3><ul>${videoLinks.map(v => `<li><a href="${v.url}">${v.filename}</a></li>`).join('')}</ul>`
-    : ''
-  const videosText = videoLinks.length
-    ? `\nVideos:\n${videoLinks.map(v => `- ${v.filename}: ${v.url}`).join('\n')}`
-    : ''
-
-  return {
-    subject: `Inspection Report - ${inspection.equipment.model} (${inspection.equipment.serial})`,
-    html: `
-      <h2>Inspection Report</h2>
-      <p>Please find the attached inspection report for:</p>
-      <ul>
-        <li><strong>Equipment:</strong> ${inspection.equipment.model}</li>
-        <li><strong>Serial Number:</strong> ${inspection.equipment.serial}</li>
-        <li><strong>Date:</strong> ${new Date(inspection.startedAt).toLocaleString()}</li>
-        <li><strong>Status:</strong> ${inspection.status.replace(/_/g, ' ')}</li>
-        <li><strong>Technician:</strong> ${inspection.technician?.name || 'N/A'}</li>
-      </ul>
-      ${videosHtml}
-      <p>This report was generated automatically by the Technical Inspection Platform.</p>
-    `,
-    text: `Inspection Report - ${inspection.equipment.model} (${inspection.equipment.serial})\n\nPlease find the attached inspection report PDF.${videosText}`,
-    filename: `inspection-${inspection.id}.pdf`
-  }
 }
 
 
