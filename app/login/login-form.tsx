@@ -76,10 +76,6 @@ export default function LoginForm() {
           {isPending ? 'Signing in...' : 'Sign in'}
         </button>
       </div>
-      
-      <div className="text-xs text-gray-500 text-center">
-        Default credentials: zumadev2@zumasales.com / admin123
-      </div>
     </form>
   )
 }

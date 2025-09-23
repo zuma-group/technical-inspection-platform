@@ -1,8 +1,7 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
-import { Icons } from '@/lib/icons'
 import EmailReportButton from './email-report-button'
+import MediaGallery from './media-gallery'
 
 export const dynamic = 'force-dynamic'
 
@@ -96,44 +95,12 @@ export default async function InspectionDetailPage({
                 </div>
                 
                 {/* Media display */}
-                    {cp.media && cp.media.length > 0 && (
+                {cp.media && cp.media.length > 0 && (
                   <div className="mt-3">
                     <p className="text-xs text-gray-600 mb-2">Attached media ({cp.media.length}):</p>
-                    <div className="flex gap-2 overflow-x-auto">
-                      {cp.media.map((media) => (
-                        <div key={media.id} className="flex-shrink-0">
-                          {media.type === 'video' ? (
-                            <a
-                              href={`/api/media/${media.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title="Open video"
-                              className="block"
-                            >
-                              <div className="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center text-white hover:opacity-90">
-                                <Icons.video className="w-6 h-6" />
-                              </div>
-                            </a>
-                          ) : (
-                            <a
-                              href={`/api/media/${media.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title="Open image"
-                              className="block"
-                            >
-                              <Image
-                                src={`/api/media/${media.id}`}
-                                alt="Checkpoint media"
-                                width={64}
-                                height={64}
-                                className="w-16 h-16 object-cover rounded-lg border border-gray-300 hover:opacity-90"
-                              />
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    <MediaGallery
+                      media={cp.media.map(m => ({ id: m.id, type: m.type === 'video' ? 'video' : 'image' }))}
+                    />
                   </div>
                 )}
               </div>
