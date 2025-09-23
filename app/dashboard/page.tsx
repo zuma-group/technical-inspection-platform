@@ -1,12 +1,20 @@
 import Link from 'next/link'
 import { getDashboardData } from './actions'
 import { Icons, iconSizes } from '@/lib/icons'
+import { getSession } from '@/lib/auth'
+import { getUsers } from './actions'
+import ManageUsers from '@/app/dashboard/manage-users'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function DashboardPage() {
-  const data = await getDashboardData()
+  const [data, session] = await Promise.all([
+    getDashboardData(),
+    getSession()
+  ])
+  const isAdmin = session?.role === 'ADMIN'
+  const usersData = isAdmin ? await getUsers() : { success: false, data: [] as any[] }
   
   // Calculate metrics
   const totalEquipment = data.equipment.length
@@ -55,6 +63,14 @@ export default async function DashboardPage() {
                 Manage Templates
               </button>
             </Link>
+            {isAdmin && (
+              <a href="#users" className="no-underline">
+                <button className="btn btn-secondary inline-flex items-center gap-2">
+                  <Icons.userCheck className={iconSizes.sm} />
+                  <span>Manage Users</span>
+                </button>
+              </a>
+            )}
             <Link href="/equipment/new">
               <button className="btn btn-primary inline-flex items-center gap-2">
                 <Icons.add className={iconSizes.sm} />
@@ -114,6 +130,15 @@ export default async function DashboardPage() {
       </div>
 
       <div className="space-y-4">
+        {isAdmin && (
+          <div id="users" className="card">
+            <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
+              <Icons.userCheck className={iconSizes.sm} />
+              User Management
+            </h2>
+            <ManageUsers initialUsers={usersData.success ? usersData.data : []} currentUserId={session!.userId} />
+          </div>
+        )}
         {/* Equipment Status Chart */}
         <div className="card">
           <h2 className="text-base font-semibold mb-4">
