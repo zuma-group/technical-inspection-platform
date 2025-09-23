@@ -54,8 +54,8 @@ export default function InspectionClient({ inspection }) {
   const isAnyUploading = Object.values(uploadingByCheckpoint).some(Boolean)
 
   const handleCheckpoint = (checkpointId: string, checkpointName: string, status: string) => {
-    if (status === 'PASS' || status === 'NOT_APPLICABLE') {
-      // Pass and N/A are instant, no modal
+    if (status === 'NOT_APPLICABLE') {
+      // N/A is instant, no modal
       setCheckpoints(prev => ({ 
         ...prev, 
         [checkpointId]: { ...prev[checkpointId], status } 
@@ -64,12 +64,12 @@ export default function InspectionClient({ inspection }) {
         await updateCheckpoint(checkpointId, status)
       })
     } else {
-      // Open modal for Corrected or Action Required
+      // Open modal for PASS, CORRECTED, or ACTION_REQUIRED
       setModalState({
         isOpen: true,
         checkpointId,
         checkpointName,
-        status: status as 'CORRECTED' | 'ACTION_REQUIRED'
+        status: status as 'PASS' | 'CORRECTED' | 'ACTION_REQUIRED'
       })
     }
   }
@@ -84,16 +84,15 @@ export default function InspectionClient({ inspection }) {
     if (!modalState) return
 
     // Update local state immediately
-    // Clear notes, hours, and media for PASS and NOT_APPLICABLE statuses
-    const shouldClearData = data.status === 'PASS' || data.status === 'NOT_APPLICABLE'
-    
+    // Only clear for NOT_APPLICABLE. For PASS, allow notes and media; hours remain only for ACTION_REQUIRED
+    const isNA = data.status === 'NOT_APPLICABLE'
     setCheckpoints(prev => ({
       ...prev,
       [modalState.checkpointId]: {
         status: data.status,
-        notes: shouldClearData ? null : data.notes,
-        estimatedHours: shouldClearData ? null : data.estimatedHours,
-        media: shouldClearData ? [] : prev[modalState.checkpointId].media
+        notes: isNA ? null : data.notes,
+        estimatedHours: data.status === 'ACTION_REQUIRED' ? data.estimatedHours : null,
+        media: isNA ? [] : prev[modalState.checkpointId].media
       }
     }))
 
@@ -109,10 +108,10 @@ export default function InspectionClient({ inspection }) {
     try {
       setUploadingByCheckpoint(prev => ({ ...prev, [captured.checkpointId]: true }))
       setUploadProgressByCheckpoint(prev => ({ ...prev, [captured.checkpointId]: 0 }))
-      const shouldClearData = data.status === 'PASS' || data.status === 'NOT_APPLICABLE'
+      const isNA = data.status === 'NOT_APPLICABLE'
       
-      // If changing to PASS or N/A, delete all existing media
-      if (shouldClearData && captured.existingMedia) {
+      // If changing to N/A, delete all existing media
+      if (isNA && captured.existingMedia) {
         for (const media of captured.existingMedia) {
           await fetch(`/api/media/${media.id}`, {
             method: 'DELETE'
@@ -140,8 +139,8 @@ export default function InspectionClient({ inspection }) {
               const { media } = await response.json()
               setCheckpoints(prev => ({
                 ...prev,
-                [modalState.checkpointId]: {
-                  ...prev[modalState.checkpointId],
+                [captured.checkpointId]: {
+                  ...prev[captured.checkpointId],
                   media: [...prev[modalState.checkpointId].media, ...media]
                 }
               }))
@@ -241,7 +240,7 @@ export default function InspectionClient({ inspection }) {
             ...prev,
             [captured.checkpointId]: {
               ...prev[captured.checkpointId],
-              media: prev[modalState.checkpointId].media.filter(
+              media: prev[captured.checkpointId].media.filter(
                 (m: { id: string }) => !data.removedMediaIds?.includes(m.id)
               )
             }
@@ -253,8 +252,8 @@ export default function InspectionClient({ inspection }) {
       await updateCheckpoint(
         captured.checkpointId,
         data.status,
-        shouldClearData ? null : data.notes,
-        shouldClearData ? null : data.estimatedHours
+        isNA ? null : data.notes,
+        data.status === 'ACTION_REQUIRED' ? data.estimatedHours ?? null : null
       )
     } finally {
       setUploadingByCheckpoint(prev => ({ ...prev, [captured.checkpointId]: false }))
