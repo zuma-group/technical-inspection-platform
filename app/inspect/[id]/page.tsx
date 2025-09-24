@@ -57,8 +57,9 @@ async function getOrCreateInspection(
       })
     }
 
-    // Get template sections
-    let sections = []
+  // Get template sections and track selected template id
+  let sections = []
+  let selectedTemplateId: string | null = null
     
     if (templateId) {
       const template = await (prisma as any).inspectionTemplate.findUnique({
@@ -76,6 +77,7 @@ async function getOrCreateInspection(
       })
       
       if (template) {
+        selectedTemplateId = template.id
         sections = template.sections.map(section => ({
           name: section.name,
           order: section.order,
@@ -108,6 +110,7 @@ async function getOrCreateInspection(
       })
 
       if (defaultTemplate) {
+        selectedTemplateId = defaultTemplate.id
         sections = defaultTemplate.sections.map(section => ({
           name: section.name,
           order: section.order,
@@ -142,6 +145,7 @@ async function getOrCreateInspection(
         equipmentId,
         technicianId: user.id,
         status: 'IN_PROGRESS',
+        templateId: selectedTemplateId,
         taskId: taskId || (equipment as any).taskId || null,
         serialNumber: serialNumber || null,
         sections: {
