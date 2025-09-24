@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // Allow static assets in the public folder (by file extension)
+  if (/\.(?:png|jpg|jpeg|gif|svg|webp|ico|txt|xml|css|js|map|woff2?|ttf|eot|otf)$/i.test(pathname)) {
+    return NextResponse.next()
+  }
+
   // Allow access to login page and API routes
-  if (request.nextUrl.pathname.startsWith('/login') || 
-      request.nextUrl.pathname.startsWith('/api/') ||
-      request.nextUrl.pathname.startsWith('/_next/')) {
+  if (pathname.startsWith('/login') || 
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/_next/')) {
     return NextResponse.next()
   }
 
@@ -43,6 +50,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\.(?:png|jpg|jpeg|gif|svg|webp|ico|txt|xml|css|js|map|woff|woff2|ttf|eot|otf)).*)',
   ],
 }
