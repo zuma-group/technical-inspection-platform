@@ -31,6 +31,7 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/app ./app
 COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/public ./public
 
 # Entrypoint script to run prisma db push and then start
 COPY docker/entrypoint.sh /entrypoint.sh
