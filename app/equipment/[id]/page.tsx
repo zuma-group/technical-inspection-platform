@@ -37,7 +37,9 @@ export default async function EquipmentDetailPage({
   const equipment = await getEquipmentWithInspections(id);
 
   // Gather template names for inspections that reference a template
-  let templateNameById: Record<string, string> = {};
+  let templateNameById: Record<string, string> = {}
+  let defaultTemplateName: string | undefined
+  
   if (equipment?.inspections?.length) {
     const templateIds = Array.from(
       new Set(
@@ -55,6 +57,12 @@ export default async function EquipmentDetailPage({
         templates.map((t: any) => [t.id, t.name])
       );
     }
+    // Fallback for historical inspections without templateId: use current default template name
+    const defaultTemplate = await (prisma as any).inspectionTemplate.findFirst({
+      where: { equipmentType: (equipment as any).type, isDefault: true },
+      select: { id: true, name: true }
+    })
+    defaultTemplateName = defaultTemplate?.name
   }
 
   if (!equipment) {
@@ -123,105 +131,35 @@ export default async function EquipmentDetailPage({
                 }}
               >
                 <thead>
-                  <tr style={{ borderBottom: "2px solid #E5E7EB" }}>
-                    <th
-                      style={{
-                        width: "14.2857%",
-                        padding: "12px",
-                        textAlign: "left",
-                      }}
-                    >
-                      Date
-                    </th>
-                    <th
-                      style={{
-                        width: "14.2857%",
-                        padding: "12px",
-                        textAlign: "left",
-                      }}
-                    >
-                      Status
-                    </th>
-                    <th
-                      style={{
-                        width: "14.2857%",
-                        padding: "12px",
-                        textAlign: "left",
-                      }}
-                    >
-                      Type
-                    </th>
-                    <th
-                      style={{
-                        width: "14.2857%",
-                        padding: "12px",
-                        textAlign: "left",
-                      }}
-                    >
-                      Technician
-                    </th>
-                    <th
-                      style={{
-                        width: "14.2857%",
-                        padding: "12px",
-                        textAlign: "left",
-                      }}
-                    >
-                      Issues
-                    </th>
-                    <th
-                      style={{
-                        width: "28.5714%",
-                        padding: "12px",
-                        textAlign: "left",
-                      }}
-                    >
-                      Actions
-                    </th>
+
+                  <tr style={{ borderBottom: '2px solid #E5E7EB' }}>
+                    <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Date</th>
+                    <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Status</th>
+                    <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Inspection</th>
+                    <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Technician</th>
+                    <th style={{ width: '14.2857%', padding: '12px', textAlign: 'left' }}>Issues</th>
+                    <th style={{ width: '28.5714%', padding: '12px', textAlign: 'left' }}>Actions</th>
+
                   </tr>
                 </thead>
                 <tbody>
                   {equipment.inspections.map((insp) => {
-                    const checkpoints = insp.sections.flatMap(
-                      (s) => s.checkpoints
-                    );
-                    const criticalIssues = checkpoints.filter(
-                      (cp) => cp.critical && cp.status === "ACTION_REQUIRED"
-                    ).length;
-                    const nonCriticalIssues = checkpoints.filter(
-                      (cp) => !cp.critical && cp.status === "ACTION_REQUIRED"
-                    ).length;
-                    const totalIssues = criticalIssues + nonCriticalIssues;
-                    const templateName =
-                      templateNameById[(insp as any).templateId as string];
-                    const completedCheckpoints = checkpoints.filter(
-                      (cp) => cp.status
-                    ).length;
-                    const totalCheckpoints = checkpoints.length;
-                    const progressPercentage =
-                      totalCheckpoints > 0
-                        ? Math.round(
-                            (completedCheckpoints / totalCheckpoints) * 100
-                          )
-                        : 0;
+
+                    const checkpoints = insp.sections.flatMap(s => s.checkpoints)
+                    const criticalIssues = checkpoints.filter(cp => cp.critical && cp.status === 'ACTION_REQUIRED').length
+                    const nonCriticalIssues = checkpoints.filter(cp => !cp.critical && cp.status === 'ACTION_REQUIRED').length
+                    const totalIssues = criticalIssues + nonCriticalIssues
+                    const templateName = (insp as any).templateId
+                      ? templateNameById[(insp as any).templateId as string]
+                      : defaultTemplateName
+                    const completedCheckpoints = checkpoints.filter(cp => cp.status).length
+                    const totalCheckpoints = checkpoints.length
+                    const progressPercentage = totalCheckpoints > 0 ? Math.round((completedCheckpoints / totalCheckpoints) * 100) : 0
                     return (
-                      <tr
-                        key={insp.id}
-                        style={{ borderBottom: "1px solid #E5E7EB" }}
-                      >
-                        <td
-                          style={{
-                            width: "14.2857%",
-                            padding: "12px",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          <div>
-                            {new Date(insp.startedAt).toLocaleDateString()}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {new Date(insp.startedAt).toLocaleTimeString()}
-                          </div>
+                      <tr key={insp.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
+                        <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>
+                          <div>{require('@/lib/time').formatPDTDate(insp.startedAt)}</div>
+                          <div className="text-xs text-gray-500 mt-1">{require('@/lib/time').formatPDTTime(insp.startedAt)}</div>
                         </td>
                         <td
                           style={{
@@ -258,31 +196,13 @@ export default async function EquipmentDetailPage({
                         >
                           {templateName || equipment.type.replace(/_/g, " ")}
                         </td>
-                        <td
-                          style={{
-                            width: "14.2857%",
-                            padding: "12px",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {insp.technician?.name || "Field Tech"}
-                        </td>
-                        <td
-                          style={{
-                            width: "14.2857%",
-                            padding: "12px",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {totalIssues > 0
-                            ? `${totalIssues} (${criticalIssues} critical)`
-                            : "None"}
-                        </td>
-                        <td style={{ width: "28.5714%", padding: "12px" }}>
-                          <div
-                            className="flex flex-nowrap gap-2 items-center overflow-x-auto"
-                            style={{ whiteSpace: "nowrap" }}
-                          >
+
+                        <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{templateName ?? '—'}</td>
+                        <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{insp.technician?.name || 'Field Tech'}</td>
+                        <td style={{ width: '14.2857%', padding: '12px', wordBreak: 'break-word' }}>{totalIssues > 0 ? `${totalIssues} (${criticalIssues} critical)` : 'None'}</td>
+                        <td style={{ width: '28.5714%', padding: '12px' }}>
+                          <div className="flex gap-2 items-center" style={{ whiteSpace: 'nowrap' }}>
+
                             <Link href={`/inspections/${insp.id}`}>
                               <button className="btn btn-secondary text-sm flex-shrink whitespace-nowrap">
                                 View
@@ -312,26 +232,18 @@ export default async function EquipmentDetailPage({
             {/* Mobile Card View */}
             <div className="md:hidden space-y-4">
               {equipment.inspections.map((insp) => {
-                const checkpoints = insp.sections.flatMap((s) => s.checkpoints);
-                const criticalIssues = checkpoints.filter(
-                  (cp) => cp.critical && cp.status === "ACTION_REQUIRED"
-                ).length;
-                const nonCriticalIssues = checkpoints.filter(
-                  (cp) => !cp.critical && cp.status === "ACTION_REQUIRED"
-                ).length;
-                const totalIssues = criticalIssues + nonCriticalIssues;
-                const templateName =
-                  templateNameById[(insp as any).templateId as string];
-                const completedCheckpoints = checkpoints.filter(
-                  (cp) => cp.status
-                ).length;
-                const totalCheckpoints = checkpoints.length;
-                const progressPercentage =
-                  totalCheckpoints > 0
-                    ? Math.round(
-                        (completedCheckpoints / totalCheckpoints) * 100
-                      )
-                    : 0;
+
+                const checkpoints = insp.sections.flatMap(s => s.checkpoints)
+                const criticalIssues = checkpoints.filter(cp => cp.critical && cp.status === 'ACTION_REQUIRED').length
+                const nonCriticalIssues = checkpoints.filter(cp => !cp.critical && cp.status === 'ACTION_REQUIRED').length
+                const totalIssues = criticalIssues + nonCriticalIssues
+                const templateName = (insp as any).templateId
+                  ? templateNameById[(insp as any).templateId as string]
+                  : defaultTemplateName
+                const completedCheckpoints = checkpoints.filter(cp => cp.status).length
+                const totalCheckpoints = checkpoints.length
+                const progressPercentage = totalCheckpoints > 0 ? Math.round((completedCheckpoints / totalCheckpoints) * 100) : 0
+
                 return (
                   <div
                     key={insp.id}
@@ -339,7 +251,7 @@ export default async function EquipmentDetailPage({
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="text-sm font-medium text-gray-900">
-                        {new Date(insp.startedAt).toLocaleDateString()}
+                        {require('@/lib/time').formatPDTDate(insp.startedAt)}
                       </div>
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
@@ -378,10 +290,10 @@ export default async function EquipmentDetailPage({
 
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Type:</span>
-                        <span className="font-medium">
-                          {templateName || equipment.type.replace(/_/g, " ")}
-                        </span>
+
+                        <span className="text-gray-600">Inspection:</span>
+                        <span className="font-medium">{templateName ?? '—'}</span>
+
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Technician:</span>

@@ -5,6 +5,9 @@ import ErrorBoundary from './components/error-boundary'
 export const metadata = {
   title: 'Equipment Inspection',
   description: 'Fast equipment inspection tool',
+  icons: {
+    icon: '/zuma-favicon.png',
+  },
 }
 
 export default function RootLayout({

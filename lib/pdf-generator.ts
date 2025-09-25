@@ -56,6 +56,8 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   let y = pageHeight - pageMargin
 
   // Enhanced text drawing with better spacing and alignment options
+  const sanitize = (s: string) => (s ?? '').toString().replace(/[\t\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim()
+
   const drawText = (text: string, options?: { 
     size?: number; 
     font?: any; 
@@ -71,7 +73,7 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
     const lineHeight = options?.lineHeight ?? 1.3
     const indent = options?.indent ?? 0
     const maxWidth = contentWidth - indent
-    const words = text.split(' ')
+    const words = sanitize(text).split(' ')
     let line = ''
     const lines: string[] = []
     
@@ -345,13 +347,19 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   drawSectionHeader('Inspection Overview')
   
   // Equipment info in a clean table-like format
-  const overviewData = [
+  const taskId = (inspection as any).taskId || (inspection as any).equipment?.taskId
+  let overviewData = [
     ['Equipment Model:', inspection.equipment.model],
     ['Serial Number:', inspection.equipment.serial],
-    ['Inspection Date:', new Date(inspection.startedAt).toLocaleString()],
+    ['Inspection Date:', require('./time').formatPDTDateTime(inspection.startedAt)],
     ['Current Status:', inspection.status.replace(/_/g, ' ').toUpperCase()],
     ['Technician:', inspection.technician?.name || 'Not Assigned'],
   ]
+
+  // Insert Task ID after Serial Number if available
+  if (taskId) {
+    overviewData.splice(2, 0, ['Task ID:', String(taskId)])
+  }
 
   for (const [label, value] of overviewData) {
     const currentY = y
@@ -545,7 +553,7 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   // Add page numbers and footer to all pages
   const pages = pdfDoc.getPages()
   const totalPages = pages.length
-  const footerText = `Generated on ${new Date().toLocaleString()} | Technical Inspection Platform`
+  const footerText = `Generated on ${require('./time').formatPDTDateTime(new Date())} | Technical Inspection Platform`
   
   pages.forEach((currentPage, index) => {
     const pageNumber = index + 1
@@ -579,26 +587,6 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   })
 
   return await pdfDoc.save()
-}
-
-export function generateEmailContent(inspection: InspectionData) {
-  return {
-    subject: `Inspection Report - ${inspection.equipment.model} (${inspection.equipment.serial})`,
-    html: `
-      <h2>Inspection Report</h2>
-      <p>Please find the attached inspection report for:</p>
-      <ul>
-        <li><strong>Equipment:</strong> ${inspection.equipment.model}</li>
-        <li><strong>Serial Number:</strong> ${inspection.equipment.serial}</li>
-        <li><strong>Date:</strong> ${new Date(inspection.startedAt).toLocaleString()}</li>
-        <li><strong>Status:</strong> ${inspection.status.replace(/_/g, ' ')}</li>
-        <li><strong>Technician:</strong> ${inspection.technician?.name || 'N/A'}</li>
-      </ul>
-      <p>This report was generated automatically by the Technical Inspection Platform.</p>
-    `,
-    text: `Inspection Report - ${inspection.equipment.model} (${inspection.equipment.serial})\n\nPlease find the attached inspection report PDF.`,
-    filename: `inspection-${inspection.id}.pdf`
-  }
 }
 
 

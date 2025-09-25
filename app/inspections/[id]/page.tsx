@@ -1,8 +1,7 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
-import { Icons } from '@/lib/icons'
 import EmailReportButton from './email-report-button'
+import MediaGallery from './media-gallery'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,7 +65,7 @@ export default async function InspectionDetailPage({
           {inspection.equipment.model} • {inspection.equipment.serial}
         </p>
         <p className="text-sm text-gray-600 mt-1">
-          {new Date(inspection.startedAt).toLocaleString()} • Status: {inspection.status.replace(/_/g, ' ')}
+          {require('@/lib/time').formatPDTDateTime(inspection.startedAt)} • Status: {inspection.status.replace(/_/g, ' ')}
         </p>
       </div>
 
@@ -99,25 +98,9 @@ export default async function InspectionDetailPage({
                 {cp.media && cp.media.length > 0 && (
                   <div className="mt-3">
                     <p className="text-xs text-gray-600 mb-2">Attached media ({cp.media.length}):</p>
-                    <div className="flex gap-2 overflow-x-auto">
-                      {cp.media.map((media) => (
-                        <div key={media.id} className="flex-shrink-0">
-                          {media.type === 'video' ? (
-                            <div className="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center text-white">
-                              <Icons.video className="w-6 h-6" />
-                            </div>
-                          ) : (
-                            <Image
-                              src={`/api/media/${media.id}`}
-                              alt="Checkpoint media"
-                              width={64}
-                              height={64}
-                              className="w-16 h-16 object-cover rounded-lg border border-gray-300"
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    <MediaGallery
+                      media={cp.media.map(m => ({ id: m.id, type: m.type === 'video' ? 'video' : 'image' }))}
+                    />
                   </div>
                 )}
               </div>

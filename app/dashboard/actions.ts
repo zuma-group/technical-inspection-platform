@@ -2,6 +2,8 @@
 
 import { prisma } from '@/lib/prisma'
 import { CheckpointStatus } from '@prisma/client'
+import { revalidatePath } from 'next/cache'
+import { getSession, hashPassword } from '@/lib/auth'
 
 export async function getDashboardData() {
   try {
@@ -315,5 +317,109 @@ export async function getDashboardMetrics() {
       error: 'Failed to fetch dashboard metrics',
       metrics: null
     }
+  }
+}
+
+// Admin-only: User management actions
+
+async function requireAdmin() {
+  const session = await getSession()
+  if (!session || session.role !== 'ADMIN') {
+    throw new Error('Unauthorized')
+  }
+  return session
+}
+
+export async function getUsers() {
+  await requireAdmin()
+  try {
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      orderBy: { createdAt: 'desc' }
+    })
+    return { success: true, data: users }
+  } catch (error) {
+    console.error('Failed to fetch users:', error)
+    return { success: false, error: 'Failed to fetch users', data: [] }
+  }
+}
+
+export async function createUserAction(data: { name: string; email: string; role: string; password: string }) {
+  await requireAdmin()
+  try {
+    if (!data.name || !data.email || !data.role || !data.password) {
+      return { success: false, error: 'All fields are required' }
+    }
+    const normalizedRole = data.role.toUpperCase().replace(/\s+/g, '_')
+    const passwordHash = await hashPassword(data.password)
+    const user = await prisma.user.create({
+      data: {
+        name: data.name,
+        email: data.email.trim().toLowerCase(),
+        role: normalizedRole as any,
+        password: passwordHash
+      } as any,
+      select: { id: true, name: true, email: true, role: true, createdAt: true }
+    })
+    revalidatePath('/dashboard')
+    return { success: true, data: user }
+  } catch (error) {
+    console.error('Failed to create user:', error)
+    const message = error instanceof Error && /Unique constraint/i.test(error.message)
+      ? 'A user with this email already exists'
+      : 'Failed to create user'
+    return { success: false, error: message }
+  }
+}
+
+export async function updateUserAction(
+  id: string,
+  updates: { name?: string; email?: string; role?: string; newPassword?: string }
+) {
+  await requireAdmin()
+  try {
+    const data: Record<string, any> = {}
+    if (updates.name !== undefined) data.name = updates.name
+    if (updates.email !== undefined) data.email = updates.email.trim().toLowerCase()
+    if (updates.role !== undefined) data.role = updates.role.toUpperCase().replace(/\s+/g, '_') as any
+    if (updates.newPassword) data.password = await hashPassword(updates.newPassword)
+
+    const user = await prisma.user.update({
+      where: { id },
+      data,
+      select: { id: true, name: true, email: true, role: true, createdAt: true }
+    })
+    revalidatePath('/dashboard')
+    return { success: true, data: user }
+  } catch (error) {
+    console.error('Failed to update user:', error)
+    const message = error instanceof Error && /Record to update not found/i.test(error.message)
+      ? 'User not found'
+      : 'Failed to update user'
+    return { success: false, error: message }
+  }
+}
+
+export async function deleteUserAction(id: string) {
+  const session = await requireAdmin()
+  try {
+    // Prevent deleting self
+    if (id === session.userId) {
+      return { success: false, error: 'You cannot delete your own account' }
+    }
+
+    // Prevent removing the last admin
+    const adminCount = await prisma.user.count({ where: { role: 'ADMIN' as any } })
+    const user = await prisma.user.findUnique({ where: { id }, select: { role: true } })
+    if (user?.role === ('ADMIN' as any) && adminCount <= 1) {
+      return { success: false, error: 'Cannot delete the last admin' }
+    }
+
+    await prisma.user.delete({ where: { id } })
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to delete user:', error)
+    return { success: false, error: 'Failed to delete user' }
   }
 }

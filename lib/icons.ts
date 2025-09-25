@@ -54,6 +54,7 @@ import {
   Clipboard,
   Mail
 } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Mic, MicOff } from 'lucide-react';
 
 export const Icons = {
@@ -126,6 +127,7 @@ export const Icons = {
   mic: Mic,
   micOff: MicOff,
   mail: Mail,
+  users: Users,
 };
 
 // Consistent sizing classes
