@@ -70,6 +70,7 @@ model Inspection {
   templateId   String?
   taskId       String?
   serialNumber String?
+  freightId    String?
   startedAt    DateTime     @default(now())
   completedAt  DateTime?
   updatedAt    DateTime     @updatedAt
@@ -139,6 +140,7 @@ model InspectionTemplate {
   description     String?               @db.Text
   equipmentType   EquipmentType
   isDefault       Boolean               @default(false)
+  requiresFreightId Boolean             @default(false)
   parentTemplateId String?
   parentTemplate  InspectionTemplate?   @relation("TemplateHierarchy", fields: [parentTemplateId], references: [id])
   childTemplates  InspectionTemplate[]  @relation("TemplateHierarchy")

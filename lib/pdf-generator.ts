@@ -6,7 +6,7 @@ export type InspectionData = NonNullable<Awaited<ReturnType<typeof getInspection
 
 export async function getInspectionForPDF(inspectionId: string) {
   try {
-    return await prisma.inspection.findUnique({
+    const inspection = await prisma.inspection.findUnique({
       where: { id: inspectionId },
       include: {
         equipment: true,
@@ -22,6 +22,21 @@ export async function getInspectionForPDF(inspectionId: string) {
         }
       }
     })
+
+    // Attach template name if available (no relation defined on Inspection)
+    if (inspection?.templateId) {
+      try {
+        const template = await (prisma as any).inspectionTemplate.findUnique({
+          where: { id: inspection.templateId },
+          select: { id: true, name: true }
+        })
+        ;(inspection as any).template = template || null
+      } catch (e) {
+        // Best-effort only; leave template undefined on failure
+      }
+    }
+
+    return inspection
   } catch (error) {
     console.error('Failed to fetch inspection for PDF:', error)
     return null
@@ -348,17 +363,27 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   
   // Equipment info in a clean table-like format
   const taskId = (inspection as any).taskId || (inspection as any).equipment?.taskId
+  const freightTaskId = (inspection as any).freightId
+  const inspectionName = ((inspection as any).template?.name) || 'Quick Inspection'
   let overviewData = [
     ['Equipment Model:', inspection.equipment.model],
+    ['Inspection Name:', inspectionName],
     ['Serial Number:', inspection.equipment.serial],
     ['Inspection Date:', require('./time').formatPDTDateTime(inspection.startedAt)],
     ['Current Status:', inspection.status.replace(/_/g, ' ').toUpperCase()],
     ['Technician:', inspection.technician?.name || 'Not Assigned'],
   ]
 
-  // Insert Task ID after Serial Number if available
-  if (taskId) {
-    overviewData.splice(2, 0, ['Task ID:', String(taskId)])
+  // Insert Task ID and Freight Task ID after Serial Number if available
+  if (taskId || freightTaskId) {
+    let insertIndex = 2 // after Serial Number
+    if (taskId) {
+      overviewData.splice(insertIndex, 0, ['Task ID:', String(taskId)])
+      insertIndex++
+    }
+    if (freightTaskId) {
+      overviewData.splice(insertIndex, 0, ['Freight Task ID:', String(freightTaskId)])
+    }
   }
 
   for (const [label, value] of overviewData) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { updateCheckpoint, completeInspection, stopInspection, markAllCheckpointsAsPass } from './actions'
@@ -52,6 +52,17 @@ export default function InspectionClient({ inspection }) {
   const completedCheckpoints = Object.values(checkpoints).filter((cp: { status: string | null }) => cp.status).length
   const progress = (completedCheckpoints / totalCheckpoints) * 100
   const isAnyUploading = Object.values(uploadingByCheckpoint).some(Boolean)
+
+  // Clean query parameters like create/template/taskId/serialNumber/freightId once loaded
+  useEffect(() => {
+    try {
+      const { pathname, search } = window.location
+      if (search && typeof window !== 'undefined') {
+        // Replace URL with clean path to prevent accidental re-creation on refresh/complete
+        window.history.replaceState({}, '', pathname)
+      }
+    } catch {}
+  }, [])
 
   const handleCheckpoint = (checkpointId: string, checkpointName: string, status: string) => {
     if (status === 'NOT_APPLICABLE') {

@@ -68,6 +68,7 @@ export async function sendEmailWithPdf(options: {
 export function generateEmailContent(inspection: any) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'http://localhost:3000'
   const taskId = (inspection as any).taskId || (inspection as any).equipment?.taskId
+  const freightId = (inspection as any).freightId
   const videoLinks: Array<{ filename: string; url: string }> = []
   for (const section of inspection.sections || []) {
     for (const cp of section.checkpoints || []) {
@@ -87,15 +88,20 @@ export function generateEmailContent(inspection: any) {
     : ''
 
   return {
-    subject: taskId
-      ? `Inspection Report - [Task ${String(taskId)}] ${inspection.equipment.model} (${inspection.equipment.serial})`
-      : `Inspection Report - ${inspection.equipment.model} (${inspection.equipment.serial})`,
+    subject: (() => {
+      const parts: string[] = ['Inspection Report']
+      if (freightId) parts.push(`[Freight ${String(freightId)}]`)
+      if (taskId) parts.push(`[Task ${String(taskId)}]`)
+      parts.push(`${inspection.equipment.model} (${inspection.equipment.serial})`)
+      return parts.join(' - ')
+    })(),
     html: `
       <h2>Inspection Report</h2>
       <p>Please find the attached inspection report for:</p>
       <ul>
         <li><strong>Equipment:</strong> ${inspection.equipment.model}</li>
         <li><strong>Serial Number:</strong> ${inspection.equipment.serial}</li>
+        ${freightId ? `<li><strong>Freight ID:</strong> ${String(freightId)}</li>` : ''}
         ${taskId ? `<li><strong>Task ID:</strong> ${String(taskId)}</li>` : ''}
         <li><strong>Date:</strong> ${require('./time').formatPDTDateTime(inspection.startedAt)}</li>
         <li><strong>Status:</strong> ${inspection.status.replace(/_/g, ' ')}</li>
@@ -104,7 +110,7 @@ export function generateEmailContent(inspection: any) {
       ${videosHtml}
       <p>This report was generated automatically by the Technical Inspection Platform.</p>
     `,
-    text: `Inspection Report - ${inspection.equipment.model} (${inspection.equipment.serial})${taskId ? `\nTask ID: ${String(taskId)}` : ''}\nDate: ${require('./time').formatPDTDateTime(inspection.startedAt)}\n\nPlease find the attached inspection report PDF.${videosText}`,
+    text: `Inspection Report - ${inspection.equipment.model} (${inspection.equipment.serial})${freightId ? `\nFreight ID: ${String(freightId)}` : ''}${taskId ? `\nTask ID: ${String(taskId)}` : ''}\nDate: ${require('./time').formatPDTDateTime(inspection.startedAt)}\n\nPlease find the attached inspection report PDF.${videosText}`,
     filename: `inspection-${inspection.id}.pdf`
   }
 }
