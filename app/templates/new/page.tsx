@@ -12,6 +12,7 @@ export default function NewTemplatePage() {
   const [description, setDescription] = useState('')
   const [equipmentType, setEquipmentType] = useState('BOOM_LIFT')
   const [parentTemplateId, setParentTemplateId] = useState('')
+  const [requiresFreightId, setRequiresFreightId] = useState(false)
   const [availableTemplates, setAvailableTemplates] = useState<Array<{
     id: string;
     name: string;
@@ -52,6 +53,11 @@ export default function NewTemplatePage() {
       if (parentTemplate) {
         // Set equipment type to match parent
         setEquipmentType(parentTemplate.equipmentType)
+        // Inherit freight requirement from parent
+        // @ts-ignore parent may not include this in type but exists in data
+        if (typeof (parentTemplate as any).requiresFreightId === 'boolean') {
+          setRequiresFreightId((parentTemplate as any).requiresFreightId)
+        }
         
         // Copy parent sections as inherited
         const inheritedSections = parentTemplate.sections.map((section) => ({
@@ -84,6 +90,7 @@ export default function NewTemplatePage() {
         }
         return nonInherited
       })
+      setRequiresFreightId(false)
     }
   }, [parentTemplateId, availableTemplates])
 
@@ -190,6 +197,7 @@ export default function NewTemplatePage() {
         description,
         equipmentType,
         parentTemplateId: parentTemplateId || undefined,
+        requiresFreightId,
         sections: sectionsToCreate
       })
       console.log('Template created:', result)
@@ -288,6 +296,23 @@ export default function NewTemplatePage() {
               rows={2}
               className="form-textarea"
             />
+          </div>
+
+          <div className="lg:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Freight Template
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="w-4 h-4"
+                checked={requiresFreightId}
+                onChange={(e) => setRequiresFreightId(e.target.checked)}
+              />
+              <span className="text-sm text-gray-700">
+                If checked, system will ask for Freight ID before starting an inspection
+              </span>
+            </label>
           </div>
         </div>
       </div>

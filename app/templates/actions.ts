@@ -53,6 +53,7 @@ export async function createTemplate(data: {
   description?: string
   equipmentType: string
   parentTemplateId?: string
+  requiresFreightId?: boolean
   sections: Array<{
     name: string
     order: number
@@ -70,11 +71,12 @@ export async function createTemplate(data: {
       throw new Error(`Invalid equipment type: ${data.equipmentType}`)
     }
 
-    const template = await prisma.inspectionTemplate.create({
+    const template = await (prisma as any).inspectionTemplate.create({
       data: {
         name: data.name,
         description: data.description,
         equipmentType,
+        requiresFreightId: data.requiresFreightId ?? false,
         parentTemplateId: data.parentTemplateId || null,
         sections: {
           create: data.sections.map(section => ({

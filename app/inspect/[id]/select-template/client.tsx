@@ -20,14 +20,26 @@ export default function SelectTemplateClient({
   const [taskId, setTaskId] = useState('')
   const [serialNumber, setSerialNumber] = useState('')
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
+  const [freightId, setFreightId] = useState('')
 
   const handleStartInspection = (templateId?: string) => {
+    // Check if the chosen template (or default quick inspection) requires freight ID
+    const chosenTemplate = templateId
+      ? templates.find(t => t.id === templateId)
+      : defaultTemplate
+    const requiresFreightId = !!(chosenTemplate && (chosenTemplate as any).requiresFreightId)
+
+    if (requiresFreightId && !freightId.trim()) {
+      alert('This template requires a Freight ID. Please enter it before starting.')
+      return
+    }
     // Build URL with query params
     const params = new URLSearchParams()
     params.append('create', 'true')  // Explicitly indicate we want to create an inspection
     if (templateId) params.append('template', templateId)
     if (taskId) params.append('taskId', taskId)
     if (serialNumber) params.append('serialNumber', serialNumber)
+    if (freightId) params.append('freightId', freightId)
     
     const queryString = params.toString()
     const url = `/inspect/${equipmentId}?${queryString}`
@@ -55,7 +67,7 @@ export default function SelectTemplateClient({
       {/* Task ID and Serial Number Input Fields */}
       <div className="card mb-6">
         <h2 className="text-lg font-semibold mb-4">Inspection Details</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Task ID (Optional)
@@ -80,6 +92,21 @@ export default function SelectTemplateClient({
               className="form-input"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Freight ID {(() => {
+                const chosen = selectedTemplateId ? templates.find(t => t.id === selectedTemplateId) : defaultTemplate
+                return chosen && (chosen as any)?.requiresFreightId ? '(Required)' : '(Optional)'
+              })()}
+            </label>
+            <input
+              type="text"
+              value={freightId}
+              onChange={(e) => setFreightId(e.target.value)}
+              placeholder="Enter freight ID"
+              className="form-input"
+            />
+          </div>
         </div>
       </div>
 
@@ -101,7 +128,10 @@ export default function SelectTemplateClient({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Default Template Option */}
           <div 
-            onClick={() => handleStartInspection()}
+            onClick={() => {
+              setSelectedTemplateId('')
+              handleStartInspection()
+            }}
             className="card border-3 border-blue-500 cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 h-full flex flex-col"
           >
             <div className="flex-1 mb-4">
@@ -128,7 +158,10 @@ export default function SelectTemplateClient({
           {templates.map(template => (
             <div 
               key={template.id}
-              onClick={() => handleStartInspection(template.id)}
+              onClick={() => {
+                setSelectedTemplateId(template.id)
+                handleStartInspection(template.id)
+              }}
               className="card cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 h-full flex flex-col"
             >
               <div className="flex-1">
