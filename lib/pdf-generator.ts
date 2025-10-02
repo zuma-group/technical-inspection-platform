@@ -253,6 +253,14 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
       default: return secondaryColor
     }
   }
+  
+  // Ensure at least `needed` vertical space remains; otherwise start a new page
+  const ensureSpace = (needed: number) => {
+    if (y - needed < pageMargin) {
+      page = addPage()
+      y = pageHeight - pageMargin
+    }
+  }
 
   const drawImage = async (media: any, maxWidth?: number) => {
     try {
@@ -525,6 +533,8 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
     y -= 20
     
     for (const cp of section.checkpoints) {
+      // Make sure we have enough room for the checkpoint header block
+      ensureSpace(60)
       const status = cp.status ?? 'NOT_CHECKED'
       const statusColor = getStatusColor(status)
       const critical = cp.critical ? ' [CRITICAL]' : ''
@@ -603,15 +613,20 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
       // Add spacing between checkpoints
       y -= 15
       
-      // Light separator line
-      page.drawRectangle({
-        x: pageMargin + 20,
-        y: y + 5,
-        width: contentWidth - 40,
-        height: 0.5,
-        color: lightGrayColor
-      })
-      y -= 20
+      // Light separator line (only if there's space; otherwise move to next page)
+      if (y - 25 < pageMargin) {
+        page = addPage()
+        y = pageHeight - pageMargin
+      } else {
+        page.drawRectangle({
+          x: pageMargin + 20,
+          y: y + 5,
+          width: contentWidth - 40,
+          height: 0.5,
+          color: lightGrayColor
+        })
+        y -= 20
+      }
     }
     
     // Add extra spacing between sections
