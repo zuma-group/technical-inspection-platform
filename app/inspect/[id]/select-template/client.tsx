@@ -21,6 +21,8 @@ export default function SelectTemplateClient({
   const [serialNumber, setSerialNumber] = useState('')
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [freightId, setFreightId] = useState('')
+  const [showFreightIdModal, setShowFreightIdModal] = useState(false)
+  const [freightIdError, setFreightIdError] = useState(false)
 
   const handleStartInspection = (templateId?: string) => {
     // Check if the chosen template (or default quick inspection) requires freight ID
@@ -30,7 +32,8 @@ export default function SelectTemplateClient({
     const requiresFreightId = !!(chosenTemplate && (chosenTemplate as any).requiresFreightId)
 
     if (requiresFreightId && !freightId.trim()) {
-      alert('This template requires a Freight ID. Please enter it before starting.')
+      setFreightIdError(true)
+      setShowFreightIdModal(true)
       return
     }
     // Build URL with query params
@@ -93,7 +96,7 @@ export default function SelectTemplateClient({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className={`block text-sm font-medium mb-2 ${freightIdError ? 'text-red-600' : 'text-gray-700'}`}>
               Freight ID {(() => {
                 const chosen = selectedTemplateId ? templates.find(t => t.id === selectedTemplateId) : defaultTemplate
                 return chosen && (chosen as any)?.requiresFreightId ? '(Required)' : '(Optional)'
@@ -102,9 +105,12 @@ export default function SelectTemplateClient({
             <input
               type="text"
               value={freightId}
-              onChange={(e) => setFreightId(e.target.value)}
+              onChange={(e) => {
+                setFreightId(e.target.value)
+                if (freightIdError) setFreightIdError(false)
+              }}
               placeholder="Enter freight ID"
-              className="form-input"
+              className={`form-input ${freightIdError ? 'border-red-500 border-2 focus:border-red-600 focus:ring-red-500' : ''}`}
             />
           </div>
         </div>
@@ -192,6 +198,33 @@ export default function SelectTemplateClient({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Freight ID Error Modal */}
+      {showFreightIdModal && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-md p-6">
+            <div className="mb-5">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-red-100 rounded-full p-2">
+                  <Icons.alert className="w-6 h-6 text-red-600" />
+                </div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Freight ID Required
+                </h2>
+              </div>
+              <p className="text-gray-600">
+                This template requires a Freight ID. Please enter it before starting.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowFreightIdModal(false)}
+              className="btn btn-primary w-full"
+            >
+              OK
+            </button>
+          </div>
         </div>
       )}
     </div>
