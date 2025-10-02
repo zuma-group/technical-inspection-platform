@@ -196,6 +196,54 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
     y -= headerHeight + 5
   }
 
+  // Draw a single key/value row on one line atomically (prevents page-break splitting)
+  const drawKeyValueRow = (
+    label: string,
+    value: string,
+    options?: {
+      size?: number
+      labelFont?: any
+      valueFont?: any
+      labelColor?: any
+      valueColor?: any
+      rowHeight?: number
+      valueOffsetX?: number
+    }
+  ) => {
+    const size = options?.size ?? 11
+    const labelFontOpt = options?.labelFont ?? titleFont
+    const valueFontOpt = options?.valueFont ?? bodyFont
+    const labelColorOpt = options?.labelColor ?? secondaryColor
+    const valueColorOpt = options?.valueColor ?? rgb(0, 0, 0)
+    const rowHeight = options?.rowHeight ?? 18
+    const valueOffsetX = options?.valueOffsetX ?? 140
+
+    // Ensure the full row fits on the current page
+    if (y - rowHeight < pageMargin) {
+      page = addPage()
+      y = pageHeight - pageMargin
+    }
+
+    const currentY = y
+    // Draw label (short, no wrapping expected)
+    page.drawText(label, {
+      x: pageMargin,
+      y: currentY,
+      size,
+      font: labelFontOpt,
+      color: labelColorOpt
+    })
+    // Draw value aligned with label's baseline
+    page.drawText(value, {
+      x: pageMargin + valueOffsetX,
+      y: currentY,
+      size,
+      font: valueFontOpt,
+      color: valueColorOpt
+    })
+    y -= rowHeight
+  }
+
   // Get status color
   const getStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
@@ -354,12 +402,14 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
     color: primaryColor, 
     align: 'center' 
   })
-  y -= 10
+  y -= 20
   drawLine(contentWidth, primaryColor, 2)
   y -= 20
 
   // INSPECTION OVERVIEW SECTION
   drawSectionHeader('Inspection Overview')
+
+  y -= 20
   
   // Equipment info in a clean table-like format
   const taskId = (inspection as any).taskId || (inspection as any).equipment?.taskId
@@ -387,20 +437,15 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   }
 
   for (const [label, value] of overviewData) {
-    const currentY = y
-    drawText(label, { 
-      font: titleFont, 
-      size: 11, 
-      color: secondaryColor 
-    })
-    page.drawText(value, {
-      x: pageMargin + 140,
-      y: currentY,
+    drawKeyValueRow(label, String(value), {
       size: 11,
-      font: bodyFont,
-      color: rgb(0, 0, 0)
+      labelFont: titleFont,
+      valueFont: bodyFont,
+      labelColor: secondaryColor,
+      valueColor: rgb(0, 0, 0),
+      rowHeight: 18,
+      valueOffsetX: 140
     })
-    y -= 18
   }
 
   y -= 15
@@ -410,6 +455,8 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   y -= 15
   drawSectionHeader('Inspection Summary')
   
+  y -= 20
+
   // Calculate statistics
   let totalCheckpoints = 0
   let passCount = 0
@@ -446,27 +493,21 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   ]
 
   for (const [label, value] of summaryStats) {
-    const currentY = y
-    drawText(label, { 
-      font: titleFont, 
-      size: 11, 
-      color: secondaryColor 
-    })
-    
     // Color code the values
     let valueColor = rgb(0, 0, 0)
     if (label.includes('Critical') && value !== '0') valueColor = dangerColor
     else if (label.includes('Action Required') && value !== '0') valueColor = warningColor
     else if (label.includes('Passed')) valueColor = successColor
-    
-    page.drawText(value, {
-      x: pageMargin + 140,
-      y: currentY,
+
+    drawKeyValueRow(label, String(value), {
       size: 11,
-      font: titleFont,
-      color: valueColor
+      labelFont: titleFont,
+      valueFont: titleFont,
+      labelColor: secondaryColor,
+      valueColor,
+      rowHeight: 18,
+      valueOffsetX: 140
     })
-    y -= 18
   }
 
   y -= 20
@@ -480,6 +521,8 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
     }
 
     drawSectionHeader(`${section.name}`)
+
+    y -= 20
     
     for (const cp of section.checkpoints) {
       const status = cp.status ?? 'NOT_CHECKED'
@@ -568,7 +611,7 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
         height: 0.5,
         color: lightGrayColor
       })
-      y -= 10
+      y -= 20
     }
     
     // Add extra spacing between sections
