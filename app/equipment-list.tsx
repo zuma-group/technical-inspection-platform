@@ -26,7 +26,7 @@ export default function EquipmentList({ equipment }: { equipment: any[] }) {
         <div className="relative lg:max-w-md w-full">
           <input
             type="text"
-            placeholder=" Number, Model, or TaskSearch by Serial ID..."
+            placeholder="Search by Serial Number, Model, or Task ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="form-input pl-10"
