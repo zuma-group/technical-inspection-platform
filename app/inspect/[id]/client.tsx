@@ -17,6 +17,14 @@ export default function InspectionClient({ inspection }) {
     media: Array<{ id: string; type: string }>
     initialIndex: number
   }>({ isOpen: false, media: [], initialIndex: 0 })
+  const [confirmAllModal, setConfirmAllModal] = useState<{
+    isOpen: boolean
+    pendingCount: number
+  } | null>(null)
+  const [markAllSuccessModal, setMarkAllSuccessModal] = useState<{
+    isOpen: boolean
+    updatedCount?: number
+  } | null>(null)
   const [modalState, setModalState] = useState<{
     isOpen: boolean
     checkpointId: string
@@ -331,38 +339,33 @@ export default function InspectionClient({ inspection }) {
       alert('All checkpoints already have a status.')
       return
     }
+    setConfirmAllModal({ isOpen: true, pendingCount: pendingCheckpoints })
+  }
 
-    const confirmed = confirm(
-      `Are you sure you want to mark all ${pendingCheckpoints} remaining checkpoints as PASS? This action cannot be undone.`
-    )
-    
-    if (confirmed) {
-      startTransition(async () => {
-        const result = await markAllCheckpointsAsPass(inspection.id)
-        if (result.success) {
-          // Update local state to reflect all checkpoints as PASS
-          const updatedCheckpoints = { ...checkpoints }
-          Object.keys(updatedCheckpoints).forEach(checkpointId => {
-            if (!updatedCheckpoints[checkpointId].status) {
-              updatedCheckpoints[checkpointId] = {
-                ...updatedCheckpoints[checkpointId],
-                status: 'PASS',
-                notes: null,
-                estimatedHours: null,
-                media: []
-              }
+  const executeMarkAllAsPass = () => {
+    setConfirmAllModal(null)
+    startTransition(async () => {
+      const result = await markAllCheckpointsAsPass(inspection.id)
+      if (result.success) {
+        // Update local state to reflect all checkpoints as PASS
+        const updatedCheckpoints = { ...checkpoints }
+        Object.keys(updatedCheckpoints).forEach(checkpointId => {
+          if (!updatedCheckpoints[checkpointId].status) {
+            updatedCheckpoints[checkpointId] = {
+              ...updatedCheckpoints[checkpointId],
+              status: 'PASS',
+              notes: null,
+              estimatedHours: null,
+              media: []
             }
-          })
-          setCheckpoints(updatedCheckpoints)
-          
-          if (result.updatedCount) {
-            alert(`Successfully marked ${result.updatedCount} checkpoints as PASS.`)
           }
-        } else {
-          alert('Failed to mark checkpoints as pass. Please try again.')
-        }
-      })
-    }
+        })
+        setCheckpoints(updatedCheckpoints)
+        setMarkAllSuccessModal({ isOpen: true, updatedCount: result.updatedCount })
+      } else {
+        alert('Failed to mark checkpoints as pass. Please try again.')
+      }
+    })
   }
 
   return (
@@ -745,6 +748,56 @@ export default function InspectionClient({ inspection }) {
           isEditMode={modalState.isEditMode}
           existingData={modalState.existingData}
         />
+      )}
+
+      {/* Confirm Mark All as PASS Modal */}
+      {confirmAllModal?.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-md p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Mark All as PASS?</h2>
+              <p className="text-sm text-gray-600 mt-2">
+                Are you sure you want to mark all {confirmAllModal.pendingCount} remaining checkpoints as PASS? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmAllModal(null)}
+                className="btn btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeMarkAllAsPass}
+                className="btn btn-success flex-1"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal for Mark All as PASS */}
+      {markAllSuccessModal?.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-md p-6">
+            <div className="mb-5">
+              <h2 className="text-lg font-semibold text-gray-900">All Set</h2>
+              <p className="text-sm text-gray-600 mt-2">
+                {typeof markAllSuccessModal.updatedCount === 'number'
+                  ? `Successfully marked ${markAllSuccessModal.updatedCount} checkpoints as PASS.`
+                  : 'Successfully marked all remaining checkpoints as PASS.'}
+              </p>
+            </div>
+            <button
+              onClick={() => setMarkAllSuccessModal(null)}
+              className="btn btn-primary w-full"
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Lightbox */}
