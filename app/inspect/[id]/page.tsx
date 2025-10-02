@@ -126,9 +126,12 @@ export default async function InspectPage({
   if (shouldCreate) {
     inspection = await getOrCreateInspection(id, template, taskId, serialNumber, freightId)
   } else if (inspectionId) {
-    // Continue a specific inspection by ID
-    inspection = await prisma.inspection.findUnique({
-      where: { id: inspectionId },
+    // Continue a specific inspection by ID - validate it belongs to this equipment
+    inspection = await prisma.inspection.findFirst({
+      where: { 
+        id: inspectionId,
+        equipmentId: id  // Ensure the inspection belongs to the equipment in the URL
+      },
       include: {
         equipment: true,
         sections: {
