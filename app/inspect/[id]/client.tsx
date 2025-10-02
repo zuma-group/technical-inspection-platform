@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { updateCheckpoint, completeInspection, stopInspection, markAllCheckpointsAsPass } from './actions'
+import { updateCheckpoint, completeInspection, stopInspection, markAllCheckpointsAsPass, updateTechnicianRemarks } from './actions'
 import CheckpointModal from './modal'
 import Lightbox from './lightbox'
 import { Icons, iconSizes } from '@/lib/icons'
@@ -17,6 +17,17 @@ export default function InspectionClient({ inspection }) {
     media: Array<{ id: string; type: string }>
     initialIndex: number
   }>({ isOpen: false, media: [], initialIndex: 0 })
+  const [confirmAllModal, setConfirmAllModal] = useState<{
+    isOpen: boolean
+    pendingCount: number
+  } | null>(null)
+  const [markAllSuccessModal, setMarkAllSuccessModal] = useState<{
+    isOpen: boolean
+    updatedCount?: number
+  } | null>(null)
+  const [techRemarks, setTechRemarks] = useState<string>(inspection.technicianRemarks || '')
+  const [remarksModalOpen, setRemarksModalOpen] = useState<boolean>(false)
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [modalState, setModalState] = useState<{
     isOpen: boolean
     checkpointId: string
@@ -288,22 +299,32 @@ export default function InspectionClient({ inspection }) {
       alert(`Please complete all checkpoints (${completedCheckpoints}/${totalCheckpoints})`)
       return
     }
-    
+    // Open remarks modal to prompt the user before completing
+    setRemarksModalOpen(true)
+  }
+
+  const finalizeCompletion = async () => {
     try {
+      setIsSubmitting(true)
+      // Save remarks first (best-effort; do not block completion on failure)
+      try {
+        await updateTechnicianRemarks(inspection.id, techRemarks)
+      } catch {}
+
       console.log('Completing inspection:', inspection.id)
       const result = await completeInspection(inspection.id)
       console.log('Complete result:', result)
       
       if (result?.success) {
-        // Use Next.js router for smooth navigation
         router.push('/')
         router.refresh()
       } else {
+        setIsSubmitting(false)
         alert('Failed to complete inspection. Please try again.')
       }
     } catch (error) {
-      // Don't log the full error object to avoid the 431 issue
       console.error('Error completing inspection')
+      setIsSubmitting(false)
       alert('An error occurred while completing the inspection.')
     }
   }
@@ -325,44 +346,39 @@ export default function InspectionClient({ inspection }) {
   }
 
   const handleMarkAllAsPass = async () => {
-    const pendingCheckpoints = Object.entries(checkpoints).filter(([id, cp]: [string, any]) => !cp.status).length
+    const pendingCheckpoints = Object.entries(checkpoints).filter(([, cp]: [string, any]) => !cp.status).length
     
     if (pendingCheckpoints === 0) {
       alert('All checkpoints already have a status.')
       return
     }
+    setConfirmAllModal({ isOpen: true, pendingCount: pendingCheckpoints })
+  }
 
-    const confirmed = confirm(
-      `Are you sure you want to mark all ${pendingCheckpoints} remaining checkpoints as PASS? This action cannot be undone.`
-    )
-    
-    if (confirmed) {
-      startTransition(async () => {
-        const result = await markAllCheckpointsAsPass(inspection.id)
-        if (result.success) {
-          // Update local state to reflect all checkpoints as PASS
-          const updatedCheckpoints = { ...checkpoints }
-          Object.keys(updatedCheckpoints).forEach(checkpointId => {
-            if (!updatedCheckpoints[checkpointId].status) {
-              updatedCheckpoints[checkpointId] = {
-                ...updatedCheckpoints[checkpointId],
-                status: 'PASS',
-                notes: null,
-                estimatedHours: null,
-                media: []
-              }
+  const executeMarkAllAsPass = () => {
+    setConfirmAllModal(null)
+    startTransition(async () => {
+      const result = await markAllCheckpointsAsPass(inspection.id)
+      if (result.success) {
+        // Update local state to reflect all checkpoints as PASS
+        const updatedCheckpoints = { ...checkpoints }
+        Object.keys(updatedCheckpoints).forEach(checkpointId => {
+          if (!updatedCheckpoints[checkpointId].status) {
+            updatedCheckpoints[checkpointId] = {
+              ...updatedCheckpoints[checkpointId],
+              status: 'PASS',
+              notes: null,
+              estimatedHours: null,
+              media: []
             }
-          })
-          setCheckpoints(updatedCheckpoints)
-          
-          if (result.updatedCount) {
-            alert(`Successfully marked ${result.updatedCount} checkpoints as PASS.`)
           }
-        } else {
-          alert('Failed to mark checkpoints as pass. Please try again.')
-        }
-      })
-    }
+        })
+        setCheckpoints(updatedCheckpoints)
+        setMarkAllSuccessModal({ isOpen: true, updatedCount: result.updatedCount })
+      } else {
+        alert('Failed to mark checkpoints as pass. Please try again.')
+      }
+    })
   }
 
   return (
@@ -522,7 +538,7 @@ export default function InspectionClient({ inspection }) {
           <div className="p-4 border-t border-gray-200">
             <button
               onClick={handleMarkAllAsPass}
-              disabled={isPending || Object.entries(checkpoints).filter(([id, cp]: [string, any]) => !cp.status).length === 0}
+              disabled={isPending || isSubmitting || Object.entries(checkpoints).filter(([, cp]: [string, any]) => !cp.status).length === 0}
               className="btn btn-success w-full mb-2 text-sm"
               title="Mark all remaining checkpoints as PASS"
             >
@@ -530,14 +546,14 @@ export default function InspectionClient({ inspection }) {
             </button>
             <button
               onClick={handleComplete}
-              disabled={completedCheckpoints < totalCheckpoints || isPending || isAnyUploading}
+              disabled={completedCheckpoints < totalCheckpoints || isPending || isAnyUploading || isSubmitting}
               className="btn btn-primary w-full mb-2 text-sm"
             >
               Complete Inspection ({completedCheckpoints}/{totalCheckpoints})
             </button>
             <button
               onClick={handleStopInspection}
-              disabled={isPending}
+              disabled={isPending || isSubmitting}
               className="btn btn-danger w-full text-sm opacity-80 hover:opacity-100"
               title="Stop inspection and start over"
             >
@@ -711,6 +727,7 @@ export default function InspectionClient({ inspection }) {
               )
             })}
           </div>
+
         </div>
       </div>
 
@@ -719,14 +736,14 @@ export default function InspectionClient({ inspection }) {
         <div className="flex gap-2">
           <button
             onClick={handleMarkAllAsPass}
-            disabled={isPending || Object.entries(checkpoints).filter(([id, cp]: [string, any]) => !cp.status).length === 0}
+            disabled={isPending || isSubmitting || Object.entries(checkpoints).filter(([, cp]: [string, any]) => !cp.status).length === 0}
             className="bg-green-600 text-white flex-1 min-h-[70px] text-base font-bold shadow-xl rounded-lg border-2 border-green-800 hover:bg-green-700 active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             MARK ALL PASS
           </button>
           <button
             onClick={handleComplete}
-            disabled={completedCheckpoints < totalCheckpoints || isPending}
+            disabled={completedCheckpoints < totalCheckpoints || isPending || isSubmitting}
             className="bg-blue-700 text-white flex-1 min-h-[70px] text-base font-bold shadow-xl rounded-lg border-2 border-blue-900 hover:bg-blue-800 active:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             COMPLETE ({completedCheckpoints}/{totalCheckpoints})
@@ -745,6 +762,103 @@ export default function InspectionClient({ inspection }) {
           isEditMode={modalState.isEditMode}
           existingData={modalState.existingData}
         />
+      )}
+
+      {/* Submitting overlay */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 shadow-xl w-full max-w-sm text-center">
+            <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
+            <h3 className="text-lg font-semibold text-gray-900">Submitting Inspection</h3>
+            <p className="text-sm text-gray-600 mt-1">Please wait while we finalize your report…</p>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Mark All as PASS Modal */}
+      {confirmAllModal?.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-md p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Mark All as PASS?</h2>
+              <p className="text-sm text-gray-600 mt-2">
+                Are you sure you want to mark all {confirmAllModal.pendingCount} remaining checkpoints as PASS? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmAllModal(null)}
+                className="btn btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeMarkAllAsPass}
+                className="btn btn-success flex-1"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal for Mark All as PASS */}
+      {markAllSuccessModal?.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-md p-6">
+            <div className="mb-5">
+              <h2 className="text-lg font-semibold text-gray-900">All Set</h2>
+              <p className="text-sm text-gray-600 mt-2">
+                {typeof markAllSuccessModal.updatedCount === 'number'
+                  ? `Successfully marked ${markAllSuccessModal.updatedCount} checkpoints as PASS.`
+                  : 'Successfully marked all remaining checkpoints as PASS.'}
+              </p>
+            </div>
+            <button
+              onClick={() => setMarkAllSuccessModal(null)}
+              className="btn btn-primary w-full"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Technician Remarks Modal (before completion) */}
+      {remarksModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-lg p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Technician Remarks</h2>
+              <p className="text-sm text-gray-600 mt-1">Add any final notes or recommendations.</p>
+            </div>
+            <textarea
+              value={techRemarks}
+              onChange={(e) => setTechRemarks(e.target.value)}
+              rows={5}
+              className="form-textarea"
+              placeholder="Enter remarks (optional)"
+            />
+            <div className="mt-4 flex gap-3 justify-end">
+              <button
+                onClick={() => setRemarksModalOpen(false)}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setRemarksModalOpen(false)
+                  await finalizeCompletion()
+                }}
+                className="btn btn-primary"
+              >
+                Submit & Complete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Lightbox */}

@@ -257,6 +257,20 @@ export async function markAllCheckpointsAsPass(inspectionId: string) {
   }
 }
 
+export async function updateTechnicianRemarks(inspectionId: string, remarks: string) {
+  try {
+    await prisma.inspection.update({
+      where: { id: inspectionId },
+      data: { technicianRemarks: remarks || null } as any
+    })
+    revalidatePath('/inspect/[id]', 'page')
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to update technician remarks:', error)
+    return { success: false, error: 'Failed to save remarks' }
+  }
+}
+
 export async function createInspection(
   equipmentId: string, 
   technicianId: string, 
