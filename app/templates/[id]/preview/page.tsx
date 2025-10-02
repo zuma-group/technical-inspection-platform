@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { getTemplate } from '../../actions'
+import DeleteButton from '../../delete-button'
 import { Icons, iconSizes } from '@/lib/icons'
 
 export default function PreviewTemplatePage({ 
@@ -10,9 +12,14 @@ export default function PreviewTemplatePage({
 }: { 
   params: Promise<{ id: string }> 
 }) {
+  const router = useRouter()
   const [template, setTemplate] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  
+
+  const handleDelete = () => {
+    // Redirect to templates page after deletion
+    router.push('/templates')
+  }
 
   useEffect(() => {
     const loadTemplate = async () => {
@@ -101,6 +108,12 @@ export default function PreviewTemplatePage({
                   <span>Export</span>
                 </button>
               </a>
+              <DeleteButton 
+                templateId={template.id} 
+                templateName={template.name}
+                isDefault={template.isDefault}
+                onDelete={handleDelete}
+              />
             </div>
           </div>
         </div>

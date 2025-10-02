@@ -13,6 +13,12 @@ export default function NewTemplatePage() {
   const [equipmentType, setEquipmentType] = useState('BOOM_LIFT')
   const [parentTemplateId, setParentTemplateId] = useState('')
   const [requiresFreightId, setRequiresFreightId] = useState(false)
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    type: 'error' | 'warning' | 'info'
+  } | null>(null)
   const [availableTemplates, setAvailableTemplates] = useState<Array<{
     id: string;
     name: string;
@@ -107,7 +113,12 @@ export default function NewTemplatePage() {
   const removeSection = (id: string) => {
     const section = sections.find(s => s.id === id)
     if (section?.inherited) {
-      alert('Cannot remove inherited sections. Choose a different parent template if needed.')
+      setAlertModal({
+        isOpen: true,
+        title: 'Cannot Remove Section',
+        message: 'Cannot remove inherited sections. Choose a different parent template if needed.',
+        type: 'warning'
+      })
       return
     }
     setSections(sections.filter(s => s.id !== id))
@@ -161,13 +172,23 @@ export default function NewTemplatePage() {
 
   const handleSubmit = async () => {
     if (!name) {
-      alert('Please enter a template name')
+      setAlertModal({
+        isOpen: true,
+        title: 'Missing Template Name',
+        message: 'Please enter a template name',
+        type: 'error'
+      })
       return
     }
     
     // For templates without a parent, we need at least one section
     if (!parentTemplateId && sections.length === 0) {
-      alert('Please add at least one section')
+      setAlertModal({
+        isOpen: true,
+        title: 'No Sections Added',
+        message: 'Please add at least one section',
+        type: 'error'
+      })
       return
     }
     
@@ -175,7 +196,12 @@ export default function NewTemplatePage() {
     // Inherited sections should already have valid data from parent
     const invalidSections = sections.filter(s => !s.name)
     if (invalidSections.length > 0) {
-      alert('Please fill in all required fields for sections')
+      setAlertModal({
+        isOpen: true,
+        title: 'Incomplete Sections',
+        message: 'Please fill in all required fields for sections',
+        type: 'error'
+      })
       return
     }
 
@@ -208,7 +234,12 @@ export default function NewTemplatePage() {
       }, 100)
     } catch (error) {
       console.error('Failed to create template:', error)
-      alert('Failed to create template')
+      setAlertModal({
+        isOpen: true,
+        title: 'Creation Failed',
+        message: 'Failed to create template',
+        type: 'error'
+      })
     }
   }
 
@@ -417,6 +448,63 @@ export default function NewTemplatePage() {
           Create Template
         </button>
       </div>
+
+      {/* Alert Modal */}
+      {alertModal?.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                alertModal.type === 'error' ? 'bg-red-100' :
+                alertModal.type === 'warning' ? 'bg-yellow-100' :
+                'bg-blue-100'
+              }`}>
+                {alertModal.type === 'error' ? (
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : alertModal.type === 'warning' ? (
+                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <h3 className={`text-lg font-semibold ${
+                  alertModal.type === 'error' ? 'text-red-900' :
+                  alertModal.type === 'warning' ? 'text-yellow-900' :
+                  'text-blue-900'
+                }`}>
+                  {alertModal.title}
+                </h3>
+                <p className={`text-sm ${
+                  alertModal.type === 'error' ? 'text-red-600' :
+                  alertModal.type === 'warning' ? 'text-yellow-600' :
+                  'text-blue-600'
+                }`}>
+                  {alertModal.message}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setAlertModal(null)}
+                className={`btn ${
+                  alertModal.type === 'error' ? 'btn-danger' :
+                  alertModal.type === 'warning' ? 'btn-warning' :
+                  'btn-primary'
+                }`}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

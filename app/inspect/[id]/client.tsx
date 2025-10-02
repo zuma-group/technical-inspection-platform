@@ -290,13 +290,30 @@ export default function InspectionClient({ inspection }) {
     }
   }
 
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    type: 'error' | 'warning' | 'info'
+  } | null>(null)
+
   const handleComplete = async () => {
     if (isAnyUploading) {
-      alert('Please wait for all uploads to finish before completing the inspection.')
+      setAlertModal({
+        isOpen: true,
+        title: 'Uploads in Progress',
+        message: 'Please wait for all uploads to finish before completing the inspection.',
+        type: 'warning'
+      })
       return
     }
     if (completedCheckpoints !== totalCheckpoints) {
-      alert(`Please complete all checkpoints (${completedCheckpoints}/${totalCheckpoints})`)
+      setAlertModal({
+        isOpen: true,
+        title: 'Incomplete Inspection',
+        message: `Please complete all checkpoints (${completedCheckpoints}/${totalCheckpoints})`,
+        type: 'warning'
+      })
       return
     }
     // Open remarks modal to prompt the user before completing
@@ -320,12 +337,22 @@ export default function InspectionClient({ inspection }) {
         router.refresh()
       } else {
         setIsSubmitting(false)
-        alert('Failed to complete inspection. Please try again.')
+        setAlertModal({
+          isOpen: true,
+          title: 'Completion Failed',
+          message: 'Failed to complete inspection. Please try again.',
+          type: 'error'
+        })
       }
     } catch (error) {
       console.error('Error completing inspection')
       setIsSubmitting(false)
-      alert('An error occurred while completing the inspection.')
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: 'An error occurred while completing the inspection.',
+        type: 'error'
+      })
     }
   }
 
@@ -340,7 +367,12 @@ export default function InspectionClient({ inspection }) {
         // Use window.location for a hard refresh to ensure data is refetched
         window.location.href = '/'
       } else {
-        alert('Failed to stop inspection. Please try again.')
+        setAlertModal({
+          isOpen: true,
+          title: 'Stop Failed',
+          message: 'Failed to stop inspection. Please try again.',
+          type: 'error'
+        })
       }
     }
   }
@@ -349,7 +381,12 @@ export default function InspectionClient({ inspection }) {
     const pendingCheckpoints = Object.entries(checkpoints).filter(([, cp]: [string, any]) => !cp.status).length
     
     if (pendingCheckpoints === 0) {
-      alert('All checkpoints already have a status.')
+      setAlertModal({
+        isOpen: true,
+        title: 'No Pending Checkpoints',
+        message: 'All checkpoints already have a status.',
+        type: 'info'
+      })
       return
     }
     setConfirmAllModal({ isOpen: true, pendingCount: pendingCheckpoints })
@@ -376,7 +413,12 @@ export default function InspectionClient({ inspection }) {
         setCheckpoints(updatedCheckpoints)
         setMarkAllSuccessModal({ isOpen: true, updatedCount: result.updatedCount })
       } else {
-        alert('Failed to mark checkpoints as pass. Please try again.')
+        setAlertModal({
+          isOpen: true,
+          title: 'Mark All Failed',
+          message: 'Failed to mark checkpoints as pass. Please try again.',
+          type: 'error'
+        })
       }
     })
   }
@@ -868,6 +910,63 @@ export default function InspectionClient({ inspection }) {
         media={lightbox.media}
         initialIndex={lightbox.initialIndex}
       />
+
+      {/* Alert Modal */}
+      {alertModal?.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                alertModal.type === 'error' ? 'bg-red-100' :
+                alertModal.type === 'warning' ? 'bg-yellow-100' :
+                'bg-blue-100'
+              }`}>
+                {alertModal.type === 'error' ? (
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : alertModal.type === 'warning' ? (
+                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <h3 className={`text-lg font-semibold ${
+                  alertModal.type === 'error' ? 'text-red-900' :
+                  alertModal.type === 'warning' ? 'text-yellow-900' :
+                  'text-blue-900'
+                }`}>
+                  {alertModal.title}
+                </h3>
+                <p className={`text-sm ${
+                  alertModal.type === 'error' ? 'text-red-600' :
+                  alertModal.type === 'warning' ? 'text-yellow-600' :
+                  'text-blue-600'
+                }`}>
+                  {alertModal.message}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setAlertModal(null)}
+                className={`btn ${
+                  alertModal.type === 'error' ? 'btn-danger' :
+                  alertModal.type === 'warning' ? 'btn-warning' :
+                  'btn-primary'
+                }`}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
