@@ -1,14 +1,76 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { getTemplates } from './actions'
 import DeleteButton from './delete-button'
 import { Icons, iconSizes } from '@/lib/icons'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export default function TemplatesPage() {
+  const [templates, setTemplates] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [importSuccessModal, setImportSuccessModal] = useState<{
+    isOpen: boolean
+    templateName?: string
+  } | null>(null)
 
-export default async function TemplatesPage() {
-  const templates = await getTemplates()
-  console.log('Templates loaded:', templates.length, templates.map(t => ({ id: t.id, name: t.name })))
+  useEffect(() => {
+    loadTemplates()
+  }, [])
+
+  const loadTemplates = async () => {
+    try {
+      const data = await getTemplates()
+      setTemplates(data)
+      console.log('Templates loaded:', data.length, data.map(t => ({ id: t.id, name: t.name })))
+    } catch (error) {
+      console.error('Failed to load templates:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = (templateId: string) => {
+    setTemplates(templates.filter(t => t.id !== templateId))
+  }
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const text = await file.text()
+      const res = await fetch('/api/templates/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: text
+      })
+      if (res.ok) {
+        await loadTemplates() // Reload templates
+        setImportSuccessModal({ isOpen: true })
+      } else {
+        const error = await res.json()
+        alert(`Import failed: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Import error:', error)
+      alert('Failed to import template. Please check the file format.')
+    } finally {
+      // Reset file input
+      event.target.value = ''
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading templates...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -26,12 +88,24 @@ export default async function TemplatesPage() {
             <h1 className="text-3xl font-bold text-gray-900">Inspection Templates</h1>
             <p className="text-gray-600 mt-1">Manage inspection checklists for different equipment types</p>
           </div>
-          <Link href="/templates/new">
-            <button className="btn btn-primary inline-flex items-center gap-2 hover:scale-105 hover:shadow-lg transition-all duration-200">
-              <Icons.add className={iconSizes.sm} />
-              <span>New Template</span>
-            </button>
-          </Link>
+          <div className="flex gap-2">
+            <label className="btn btn-secondary relative overflow-hidden inline-flex items-center gap-2">
+              <Icons.download className={iconSizes.sm} />
+              <span>Import</span>
+              <input
+                type="file"
+                accept="application/json,.json"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                onChange={handleImport}
+              />
+            </label>
+            <Link href="/templates/new">
+              <button className="btn btn-primary inline-flex items-center gap-2 hover:scale-105 hover:shadow-lg transition-all duration-200">
+                <Icons.add className={iconSizes.sm} />
+                <span>New Template</span>
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -108,14 +182,46 @@ export default async function TemplatesPage() {
                     <span>View</span>
                   </button>
                 </Link>
+                <a href={`/api/templates/${template.id}/export`}>
+                  <button className="btn bg-yellow-300 w-full text-sm py-2 hover:scale-105 transition-transform duration-200 inline-flex items-center justify-center gap-1">
+                    <Icons.upload className="w-3 h-3" />
+                    <span>Export</span>
+                  </button>
+                </a>
                 <DeleteButton 
                   templateId={template.id} 
                   templateName={template.name}
                   isDefault={template.isDefault}
+                  onDelete={() => handleDelete(template.id)}
                 />
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Import Success Modal */}
+      {importSuccessModal?.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <Icons.check className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Import Successful</h3>
+                <p className="text-sm text-gray-600">Template imported successfully!</p>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setImportSuccessModal(null)}
+                className="btn btn-primary"
+              >
+                OK
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

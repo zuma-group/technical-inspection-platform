@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import { deleteTemplate } from './actions'
 import { Icons } from '@/lib/icons'
 
-export default function DeleteButton({ templateId, templateName, isDefault }: { 
+export default function DeleteButton({ templateId, templateName, isDefault, onDelete }: { 
   templateId: string
   templateName: string
   isDefault: boolean
+  onDelete?: () => void
 }) {
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
@@ -25,7 +26,11 @@ export default function DeleteButton({ templateId, templateName, isDefault }: {
       setIsDeleting(true)
       try {
         await deleteTemplate(templateId)
-        router.refresh()
+        if (onDelete) {
+          onDelete()
+        } else {
+          router.refresh()
+        }
       } catch (error) {
         console.error('Failed to delete template:', error)
         alert('Failed to delete template')

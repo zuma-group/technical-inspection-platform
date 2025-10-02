@@ -1,19 +1,63 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { getTemplate } from '../../actions'
-import { notFound } from 'next/navigation'
+import { Icons, iconSizes } from '@/lib/icons'
 
-export const dynamic = 'force-dynamic'
-
-export default async function PreviewTemplatePage({ 
+export default function PreviewTemplatePage({ 
   params 
 }: { 
   params: Promise<{ id: string }> 
 }) {
-  const { id } = await params
-  const template = await getTemplate(id)
+  const [template, setTemplate] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
   
+
+  useEffect(() => {
+    const loadTemplate = async () => {
+      try {
+        const { id } = await params
+        const data = await getTemplate(id)
+        if (!data) {
+          // Handle not found case
+          return
+        }
+        setTemplate(data)
+      } catch (error) {
+        console.error('Failed to load template:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadTemplate()
+  }, [params])
+
+  
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading template...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (!template) {
-    notFound()
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">Template not found</h1>
+          <p className="text-gray-600 mt-2">The template you're looking for doesn't exist.</p>
+          <Link href="/templates" className="btn btn-primary mt-4">
+            Back to Templates
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   const totalCheckpoints = template.sections.reduce(
@@ -37,15 +81,27 @@ export default async function PreviewTemplatePage({
           </Link>
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{template.name}</h1>
-          {template.description && (
-            <p className="text-gray-600 mt-2">{template.description}</p>
-          )}
-          <div className="flex flex-wrap gap-6 mt-4 text-sm text-gray-600">
-            <span>Equipment Type: <strong className="text-gray-900">{template.equipmentType.replace('_', ' ')}</strong></span>
-            <span>Sections: <strong className="text-gray-900">{template.sections.length}</strong></span>
-            <span>Total Checkpoints: <strong className="text-gray-900">{totalCheckpoints}</strong></span>
-            <span>Critical: <strong className="text-red-600">{criticalCheckpoints}</strong></span>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{template.name}</h1>
+              {template.description && (
+                <p className="text-gray-600 mt-2">{template.description}</p>
+              )}
+              <div className="flex flex-wrap gap-6 mt-4 text-sm text-gray-600">
+                <span>Equipment Type: <strong className="text-gray-900">{template.equipmentType.replace('_', ' ')}</strong></span>
+                <span>Sections: <strong className="text-gray-900">{template.sections.length}</strong></span>
+                <span>Total Checkpoints: <strong className="text-gray-900">{totalCheckpoints}</strong></span>
+                <span>Critical: <strong className="text-red-600">{criticalCheckpoints}</strong></span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <a href={`/api/templates/${template.id}/export`}>
+                <button className="btn bg-yellow-300 inline-flex items-center gap-2 hover:scale-105 transition-transform duration-200">
+                  <Icons.download className={iconSizes.sm} />
+                  <span>Export</span>
+                </button>
+              </a>
+            </div>
           </div>
         </div>
       </div>
