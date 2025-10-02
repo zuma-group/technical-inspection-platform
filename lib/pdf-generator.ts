@@ -618,6 +618,23 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
     y -= 20
   }
 
+  // TECHNICIAN REMARKS
+  if ((inspection as any).technicianRemarks && String((inspection as any).technicianRemarks).trim().length > 0) {
+    if (y < pageMargin + 120) {
+      page = addPage()
+      y = pageHeight - pageMargin
+    }
+    drawSectionHeader('Technician Remarks')
+    y -= 15
+    drawText(String((inspection as any).technicianRemarks), {
+      font: bodyFont,
+      size: 12,
+      color: secondaryColor,
+      lineHeight: 1.5
+    })
+    y -= 10
+  }
+
   // Add page numbers and footer to all pages
   const pages = pdfDoc.getPages()
   const totalPages = pages.length

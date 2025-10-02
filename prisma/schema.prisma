@@ -71,6 +71,7 @@ model Inspection {
   taskId       String?
   serialNumber String?
   freightId    String?
+  technicianRemarks String? @db.Text
   startedAt    DateTime     @default(now())
   completedAt  DateTime?
   updatedAt    DateTime     @updatedAt
