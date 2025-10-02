@@ -61,7 +61,7 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
   // Color scheme
   const primaryColor = rgb(0.11, 0.42, 0.47) // Teal-600
   const secondaryColor = rgb(0.37, 0.37, 0.37) // Gray-600
-  const lightGrayColor = rgb(0.96, 0.96, 0.96) // Gray-100
+  const lightGrayColor = rgb(0.88, 0.88, 0.88) // Gray-300\
   const successColor = rgb(0.05, 0.46, 0.22) // Green-700
   const warningColor = rgb(0.92, 0.40, 0.11) // Orange-600
   const dangerColor = rgb(0.73, 0.06, 0.20) // Red-700
@@ -561,14 +561,20 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
         color: rgb(1, 1, 1)
       })
       
-      // Checkpoint name
-      page.drawText(`${cp.name}${critical}`, {
-        x: pageMargin + badgeWidth + 10,
-        y: y - 3,
+      // Checkpoint name with text wrapping
+      const checkpointText = `${cp.name}${critical}`
+      const originalY = y
+      y = originalY - 3 // Adjust for text baseline
+      
+      drawText(checkpointText, {
         size: 12,
         font: critical ? titleFont : bodyFont,
-        color: critical ? dangerColor : rgb(0, 0, 0)
+        color: critical ? dangerColor : rgb(0, 0, 0),
+        indent: badgeWidth + 10 // Indent from the left margin
       })
+      
+      // Reset y position for next element
+      y = originalY
       
       y -= 25
       
