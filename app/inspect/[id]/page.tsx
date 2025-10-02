@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import InspectionClient from './client'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
@@ -19,19 +19,6 @@ async function getOrCreateInspection(
       // Ensure equipment exists
       const equipment = await tx.equipment.findUnique({ where: { id: equipmentId } })
       if (!equipment) return null
-
-      // Return existing in-progress if present
-      const existing = await tx.inspection.findFirst({
-        where: { equipmentId, status: 'IN_PROGRESS' },
-        include: {
-          equipment: true,
-          sections: {
-            orderBy: { order: 'asc' },
-            include: { checkpoints: { orderBy: { order: 'asc' }, include: { media: true } } }
-          }
-        }
-      })
-      if (existing) return existing as any
 
       // Get or create default user
       let user = await tx.user.findFirst()
@@ -127,10 +114,10 @@ export default async function InspectPage({
   searchParams
 }: { 
   params: Promise<{ id: string }>
-  searchParams: Promise<{ template?: string; taskId?: string; serialNumber?: string; freightId?: string; create?: string }>
+  searchParams: Promise<{ template?: string; taskId?: string; serialNumber?: string; freightId?: string; create?: string; inspectionId?: string }>
 }) {
   const { id } = await params
-  const { template, taskId, serialNumber, freightId, create } = await searchParams
+  const { template, taskId, serialNumber, freightId, create, inspectionId } = await searchParams
   
   // Only create inspection if explicitly requested or if template is provided
   const shouldCreate = create === 'true' || !!template
@@ -138,12 +125,37 @@ export default async function InspectPage({
   let inspection
   if (shouldCreate) {
     inspection = await getOrCreateInspection(id, template, taskId, serialNumber, freightId)
+  } else if (inspectionId) {
+    // Continue a specific inspection by ID - validate it belongs to this equipment
+    inspection = await prisma.inspection.findFirst({
+      where: { 
+        id: inspectionId,
+        equipmentId: id  // Ensure the inspection belongs to the equipment in the URL
+      },
+      include: {
+        equipment: true,
+        sections: {
+          orderBy: { order: 'asc' },
+          include: {
+            checkpoints: {
+              orderBy: { order: 'asc' },
+              include: {
+                media: true,
+              },
+            },
+          },
+        },
+      },
+    })
   } else {
-    // Just get existing inspection, don't create
+    // Just get most recent in-progress inspection for this equipment
     inspection = await prisma.inspection.findFirst({
       where: {
         equipmentId: id,
         status: 'IN_PROGRESS',
+      },
+      orderBy: {
+        startedAt: 'desc',
       },
       include: {
         equipment: true,
@@ -163,6 +175,11 @@ export default async function InspectPage({
   }
 
   if (!inspection) {
+    // If no inspection found and no explicit creation was requested,
+    // redirect to template selection page
+    if (!shouldCreate && !inspectionId) {
+      redirect(`/inspect/${id}/select-template`)
+    }
     notFound()
   }
 
