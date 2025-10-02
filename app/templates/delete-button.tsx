@@ -93,7 +93,7 @@ export default function DeleteButton({ templateId, templateName, isDefault, onDe
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirm Delete</h3>
             <p className="text-sm text-gray-600">
-              Are you sure you want to delete the template "{confirmModal.templateName}"? This action cannot be undone.
+              Are you sure you want to delete the template &quot;{confirmModal.templateName}&quot;? This action cannot be undone.
             </p>
           </div>
           <div className="flex gap-3 justify-end">
