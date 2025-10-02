@@ -224,15 +224,9 @@ export default function EquipmentDetailClient({
             </p>
           </div>
           <div className="flex gap-3">
-            {equipment.inspections.some(insp => insp.status === 'IN_PROGRESS') ? (
-              <button className="btn btn-primary opacity-50 cursor-not-allowed" disabled>
-                Start Inspection
-              </button>
-            ) : (
-              <Link href={`/inspect/${equipment.id}/select-template`}>
-                <button className="btn btn-primary">Start Inspection</button>
-              </Link>
-            )}
+            <Link href={`/inspect/${equipment.id}/select-template`}>
+              <button className="btn btn-primary">Start Inspection</button>
+            </Link>
           </div>
         </div>
       </div>

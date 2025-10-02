@@ -279,18 +279,6 @@ export async function createInspection(
   serialNumber?: string
 ) {
   try {
-    // Check if there's already an in-progress inspection
-    const existingInspection = await prisma.inspection.findFirst({
-      where: {
-        equipmentId,
-        status: 'IN_PROGRESS' as any
-      }
-    })
-
-    if (existingInspection) {
-      return { success: true, data: existingInspection }
-    }
-
     // Get template if specified, otherwise get default template for equipment type
     let template = null
     if (templateId) {
