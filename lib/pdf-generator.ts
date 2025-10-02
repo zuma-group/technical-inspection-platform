@@ -343,7 +343,7 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
           color: primaryColor, 
           indent: 20 
         })
-        y -= 5 // Extra spacing after URL
+        y -= 20 // Extra spacing after URL
         return
       }
 
@@ -403,7 +403,37 @@ export async function generateInspectionPDF(inspection: InspectionData): Promise
     }
   }
 
-  // HEADER SECTION WITH TITLE
+  // HEADER SECTION WITH LOGO AND TITLE
+  // Add ZUMA logo at the top
+  try {
+    const logoResponse = await fetch(`${siteUrl}/logo.png`)
+    if (logoResponse.ok) {
+      const logoBytes = await logoResponse.arrayBuffer()
+      const logoImage = await pdfDoc.embedPng(logoBytes)
+      
+      // Calculate logo dimensions (max width 150px, maintain aspect ratio)
+      const maxLogoWidth = 150
+      const logoAspectRatio = logoImage.width / logoImage.height
+      const logoWidth = Math.min(maxLogoWidth, logoImage.width)
+      const logoHeight = logoWidth / logoAspectRatio
+      
+      // Center the logo horizontally
+      const logoX = (pageWidth - logoWidth) / 2
+      const logoY = y - logoHeight
+      
+      page.drawImage(logoImage, {
+        x: logoX,
+        y: logoY,
+        width: logoWidth,
+        height: logoHeight
+      })
+      
+      y -= logoHeight + 40 // Space after logo
+    }
+  } catch (error) {
+    console.log('Could not load logo, continuing without it:', error)
+  }
+
   drawText('TECHNICAL INSPECTION REPORT', { 
     size: 24, 
     font: titleFont, 
