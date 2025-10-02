@@ -51,7 +51,7 @@ export default function PreviewTemplatePage({
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Template not found</h1>
-          <p className="text-gray-600 mt-2">The template you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mt-2">The template you&apos;re looking for doesn&apos;t exist.</p>
           <Link href="/templates" className="btn btn-primary mt-4">
             Back to Templates
           </Link>
